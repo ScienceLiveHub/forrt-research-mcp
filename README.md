@@ -154,21 +154,35 @@ Large; prefer `constellation`.
 ## Upstream quirks this handles
 
 Found by probing live data rather than reading the API contract, and each one is
-pinned by a test against a real recorded payload:
+pinned by a test against a real recorded payload (two constellations, from
+unrelated studies):
 
-1. **`paperDoi` can name the wrong paper.** It is chosen by frequency across the
+1. **Cloudflare rejects urllib's default User-Agent.** The API runs on
+   Cloudflare Workers, whose bot protection answers `Python-urllib/3.x` with
+   HTTP 403 — same URI, same key, 200 under any normal agent. Every request this
+   client makes sets an explicit `User-Agent`. Do the same in your own client;
+   no hermetic test can catch it.
+2. **`paperDoi` can name the wrong paper.** It is chosen by frequency across the
    whole walk, so a neighbouring study's Quote nanopubs can outvote the chain's
    own citation. On the marine-heatwave chain it reports the LifeWatch ERIC
    paper (4 unrelated quotes) instead of Oliver et al. 2018, which the chain's
-   CiTO actually cites. `replicatedPaper` derives the paper from the CiTO and
-   sets `disagreesWithReported` when the two differ.
-2. **`quote.quotedText` comes back empty** on nanopubs using the current quote
+   CiTO actually cites — and it names **the same wrong paper** from the
+   unrelated Sado-estuary entry point, so this is systemic, not one bad record.
+   `replicatedPaper` derives the paper from the CiTO and sets
+   `disagreesWithReported` when the two differ.
+3. **The walk stops short, and missing does not mean unpublished.** Two real
+   chains enumerated `[Claim, Study, Outcome]` and `[Study, Outcome, CiTO]`,
+   while the Quote, AIDA and Claim nanopubs listed in those repos'
+   `PUBLISHED.md` were published and merely unreachable. `stepsNotEnumerated`
+   reports the gap. **A constellation alone cannot verify a complete chain** —
+   fetch those URIs' TriG directly.
+4. **`quote.quotedText` comes back empty** on nanopubs using the current quote
    template. The text survives in `label` and in two untagged excerpts — the
    quotation and the annotator's comment, in no guaranteed order. We match them
    against the label stem rather than assuming a position, and report the
    recovery in `text_source`.
-3. **The apex CiTO is hoisted** out of `chains[].steps[]` to top level.
-4. **The `/sciencelive/np/` URI form serves an HTML viewer** that answers 200, so
+5. **The apex CiTO is hoisted** out of `chains[].steps[]` to top level.
+6. **The `/sciencelive/np/` URI form serves an HTML viewer** that answers 200, so
    a status-only reachability check passes even when no nanopub is served. We
    normalise to the bare `w3id.org/np/` resolver and assert the body is RDF.
 

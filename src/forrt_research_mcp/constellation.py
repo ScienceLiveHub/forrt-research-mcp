@@ -185,6 +185,7 @@ def summary(uri: str, *, depth: int = 5, max_nodes: int = 80,
         steps = list(chain.get("steps") or [])
         steps.sort(key=lambda s: CHAIN_ORDER.index(s["step"])
                    if s.get("step") in CHAIN_ORDER else len(CHAIN_ORDER))
+        present = [s.get("step") for s in steps]
         chains.append({
             "id": chain.get("id") or "",
             "outcomeUri": chain.get("outcomeUri") or "",
@@ -192,7 +193,18 @@ def summary(uri: str, *, depth: int = 5, max_nodes: int = 80,
             "confidence": chain.get("outcomeConfidence") or "",
             "citoRelations": chain.get("citoRelations") or [],
             "steps": steps,
-            "stepsPresent": [s.get("step") for s in steps],
+            "stepsPresent": present,
+            # NOT a chain-integrity failure, and never proof a step is
+            # unpublished. The walk routinely stops short: on two real chains it
+            # returned [Claim, Study, Outcome] and [Study, Outcome, CiTO], while
+            # the Quote/AIDA/Claim nanopubs listed in those repos' PUBLISHED.md
+            # were published and simply not reachable. Verify these by fetching
+            # each URI's TriG directly.
+            "stepsNotEnumerated": [
+                s for s in CHAIN_ORDER if s not in present
+                and not (s == "Quote" and "Question" in present)
+                and not (s == "Question" and "Quote" in present)
+            ],
         })
 
     apex = data.get("apexCito") or None

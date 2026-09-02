@@ -22,6 +22,14 @@ DEFAULT_API_BASE = "https://api-dev.sciencelive4all.org"
 NANOPUB_RESOLVER = "https://w3id.org/np/"
 TIMEOUT = 90
 
+# MUST be sent on every request. The Science Live API runs on Cloudflare Workers,
+# whose bot protection answers urllib's default `Python-urllib/3.x` with HTTP 403
+# — verified 2026-09-02: same URI, same key, 403 under that agent and 200 under
+# this one. Without an explicit User-Agent the server is dead on arrival for
+# every user, and no hermetic test can catch it.
+USER_AGENT = ("forrt-research-mcp/0.1.0 "
+              "(+https://github.com/ScienceLiveHub/forrt-research-mcp)")
+
 
 class ApiError(RuntimeError):
     """A Science Live API call failed in a way the caller should surface verbatim."""
@@ -56,7 +64,7 @@ def get_json(path: str, params: dict[str, str] | None = None, *,
     if params:
         url = f"{url}?{urllib.parse.urlencode(params)}"
 
-    headers = {"Accept": "application/json"}
+    headers = {"Accept": "application/json", "User-Agent": USER_AGENT}
     token = api_key(key)
     if token:
         headers["x-api-key"] = token
@@ -99,7 +107,8 @@ def fetch_trig(uri: str, *, timeout: int = 30) -> str:
     is the failure a status-only check silently passes.
     """
     req = urllib.request.Request(
-        canonical_uri(uri), headers={"Accept": "application/trig"}
+        canonical_uri(uri),
+        headers={"Accept": "application/trig", "User-Agent": USER_AGENT},
     )
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
