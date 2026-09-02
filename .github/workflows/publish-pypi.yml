@@ -41,7 +41,7 @@ jobs:
           python -m build
       # Offline smoke test: the installed wheel must expose its tools and load. It
       # deliberately hits no network, so a release is never blocked by an upstream
-      # outage (production /np/constellation was down when this was written).
+      # outage (production lagged the /np/constellation release when this was written).
       - name: Smoke-check the installed wheel
         run: |
           python -m pip install dist/*.whl

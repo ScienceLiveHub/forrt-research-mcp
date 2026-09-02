@@ -5,10 +5,11 @@ without a dependency tree.
 
 Base URL precedence: explicit argument > SCIENCELIVE_API_BASE > DEFAULT_API_BASE.
 
-DEFAULT_API_BASE is the **dev** deployment deliberately. As of 2026-09-02 the
-production `/np/constellation` route returns HTTP 500 on known-good URIs while
-`/health` reports healthy, and api-dev serves the same URIs with HTTP 200.
-Flip DEFAULT_API_BASE to production once that is fixed.
+DEFAULT_API_BASE is the **dev** deployment deliberately, for now:
+`/np/constellation` is newer than the current production deployment, so as of
+2026-09-02 production answers HTTP 500 on known-good URIs while api-dev serves
+them with 200. That is deployment lag, not a fault — flip DEFAULT_API_BASE to
+production once the release lands there.
 """
 from __future__ import annotations
 
