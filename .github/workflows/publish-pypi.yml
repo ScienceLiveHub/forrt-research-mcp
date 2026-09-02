@@ -1,0 +1,91 @@
+name: Publish to PyPI
+
+# Release automation. Trigger by pushing a version tag — one push does everything:
+#     # bump version in pyproject.toml + src/forrt_replication_mcp/__init__.py, commit to main, then:
+#     git tag v0.1.0
+#     git push origin v0.1.0
+#   -> builds sdist+wheel, smoke-tests, CREATES the GitHub Release (auto notes + artefacts),
+#      and PUBLISHES to PyPI via Trusted Publishing (OIDC — no API token stored in the repo).
+#
+# Still supported: publishing on a manually-created GitHub Release (release: published) and a
+# manual workflow_dispatch. A Release created by this workflow's GITHUB_TOKEN does NOT re-trigger
+# `release: published`, so tagging never double-publishes.
+#
+# NOTE: PyPI Trusted Publishing matches the *workflow filename* — keep this file named
+# `publish-pypi.yml`. One-time setup on PyPI (pypi.org -> account -> Publishing -> Add a pending
+# publisher), before the first release:
+#   PyPI project name : forrt-replication-mcp
+#   Owner             : ScienceLiveHub
+#   Repository name   : forrt-replication-mcp
+#   Workflow name     : publish-pypi.yml
+#   Environment name  : pypi
+
+on:
+  push:
+    tags: ["v*"]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build sdist + wheel
+        run: |
+          python -m pip install --upgrade build
+          python -m build
+      # Offline smoke test: the installed wheel must expose its tools and load. It
+      # deliberately hits no network, so a release is never blocked by an upstream
+      # outage (production /np/constellation was down when this was written).
+      - name: Smoke-check the installed wheel
+        run: |
+          python -m pip install dist/*.whl
+          python - <<'PY'
+          import asyncio
+          import forrt_replication_mcp as f
+          from forrt_replication_mcp.server import mcp
+          names = {t.name for t in asyncio.run(mcp.list_tools())}
+          assert {"verify_quote", "constellation", "prior_work"} <= names, names
+          print("ok", f.__version__, sorted(names))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  # Create the GitHub Release when a version tag is pushed (auto-generated notes + built
+  # artefacts). Skipped when triggered by an already-published Release or a manual dispatch.
+  github-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: dist/*
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write   # required for trusted publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

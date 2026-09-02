@@ -1,0 +1,26 @@
+name: tests
+
+# The suite is hermetic — the constellation fixture is a recorded API response and
+# the quote tests build PDFs in-process — so CI needs no network, no API key, and
+# stays green when an upstream service is down.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install -e '.[dev]'
+      - run: python -m pytest -q
