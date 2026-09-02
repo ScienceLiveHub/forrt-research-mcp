@@ -1,9 +1,16 @@
-"""MCP server for producing verifiable FORRT replication chains.
+"""MCP server for producing verifiable FORRT nanopublication chains.
 
-Run:  forrt-replication-mcp          (stdio transport)
+Serves replications and reproductions today. New research from a research
+question is served for the Question -> AIDA -> Claim half of the chain; the
+Study/Outcome half is replication-shaped in the current Science Live templates
+(`scope` = "what part of the claim is reproduced", `validationStatus` =
+Validated/Contradicted *of an original*) and needs new templates upstream. See
+the README's Scope section — do not bend those fields to fit primary research.
+
+Run:  forrt-research-mcp          (stdio transport)
 Add user-scoped:
-    pipx install forrt-replication-mcp
-    claude mcp add forrt-replication -s user -- forrt-replication-mcp
+    pipx install forrt-research-mcp
+    claude mcp add forrt-research -s user -- forrt-research-mcp
 
 Companion to `replication-radar` (which DISCOVERS what to replicate) and the
 OpenAIRE MCP (which searches the literature). This server does neither — it
@@ -24,7 +31,7 @@ from .constellation import summary as _summary
 from .quotes import QuoteError
 from .quotes import verify_quote as _verify_quote
 
-mcp = FastMCP("forrt-replication")
+mcp = FastMCP("forrt-research")
 
 
 def _fail(error: Exception) -> dict:

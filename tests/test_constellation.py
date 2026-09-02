@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from forrt_replication_mcp import constellation as C
+from forrt_research_mcp import constellation as C
 
 FIXTURE = Path(__file__).parent / "fixtures" / "constellation-mhw.json"
 

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from forrt_replication_mcp.quotes import MIN_QUOTE_CHARS, QuoteError, verify_quote
+from forrt_research_mcp.quotes import MIN_QUOTE_CHARS, QuoteError, verify_quote
 
 # The real sentence from Oliver et al. 2018 that the marine-heatwave chain quotes.
 SENTENCE = ("The increases in frequency and duration metrics translate to 30 additional "

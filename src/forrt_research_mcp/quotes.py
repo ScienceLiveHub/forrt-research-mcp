@@ -130,7 +130,7 @@ def _page_texts(pdf_path: Path) -> list[str]:
         from pypdf import PdfReader
     except ImportError as e:  # pragma: no cover - dependency is declared
         raise QuoteError(
-            "pypdf is required to read PDFs: pip install 'forrt-replication-mcp[pdf]'"
+            "pypdf is required to read PDFs: pip install 'forrt-research-mcp[pdf]'"
         ) from e
 
     try:

@@ -1,4 +1,4 @@
-"""MCP server for producing verifiable FORRT replication chains.
+"""MCP server for producing verifiable FORRT nanopublication chains.
 
 Companion to `replication-radar` (discovery) and the OpenAIRE MCP (literature
 search). This package covers the *production* half: reusing a published

@@ -1,7 +1,9 @@
-# forrt-replication-mcp
+# forrt-research-mcp
 
-An MCP server for **producing** verifiable FORRT replication chains — the tools a
-researcher needs while doing the work, not while looking for it.
+An MCP server for **producing** verifiable FORRT nanopublication chains — the
+tools a researcher needs while doing the work, not while looking for it. It
+serves replications and reproductions today, and is named for where it is going:
+starting new research from a research question, on the same rails.
 
 It is the third of three servers that compose:
 
@@ -9,16 +11,40 @@ It is the third of three servers that compose:
 |---|---|
 | [OpenAIRE MCP](https://github.com/ScienceLiveHub/replication-radar/blob/main/docs/openaire-mcp.md) | What is in the literature? |
 | [`replication-radar`](https://github.com/ScienceLiveHub/replication-radar) | What is worth replicating, and has it been done? |
-| **`forrt-replication-mcp`** | **How do I produce a chain that is correct and verifiable?** |
+| **`forrt-research-mcp`** | **How do I produce a chain that is correct and verifiable?** |
 
 Built for the workflow in
 [`forrt-replication-template`](https://github.com/ScienceLiveHub/forrt-replication-template),
 but it needs nothing from that repo — any agent can call it.
 
+## Scope: what a FORRT chain can express today
+
+The tool names here are deliberately neutral — `constellation`, `prior_work`,
+`verify_quote` — because the chain has two entry points, and the current Science
+Live templates serve only one of them end to end:
+
+- **Chains that test an existing claim** work fully, whether paper-rooted (Quote)
+  or question-rooted (PICO / PCC): anchor → AIDA → Claim → Study → Outcome → CiTO.
+- **Genuinely new research** — you have a question, you run a study, you report a
+  finding — works for the *first half only*. Question → AIDA → Claim is clean,
+  because the FORRT Claim template takes your own `source` URI, so declaring your
+  own original claim is exactly what it is for. The second half is not: the
+  Replication Study template's fields are `scope` ("what part of the claim is
+  reproduced/replicated"), `methodology` ("how the claim is
+  reproduced/replicated") and `deviation` ("deviations from original
+  methodology"), and the Outcome's `conclusion` is "about the original claim"
+  with a `validationStatus` of Validated / PartiallySupported / Contradicted.
+  With no original, those fields have no referent.
+
+Closing that needs new templates on the Science Live side — a Research Study /
+Research Finding pair — not a workaround in this server. Until then, publish the
+Question → AIDA → Claim half and say so, rather than bending replication fields
+into a shape they were not made for.
+
 ## Why a server and not a prompt
 
-Two jobs in a replication look like reasoning but are not, and doing them in an
-agent loop makes them unreproducible and expensive:
+Two jobs here look like reasoning but are not, and doing them in an agent loop
+makes them unreproducible and expensive:
 
 **1. Reading a published chain.** `/np/constellation` walks the FORRT citation
 graph bidirectionally and returns everything it reaches. For a single
@@ -49,13 +75,13 @@ loop. The division this server is built around:
 ## Install
 
 ```bash
-pipx install forrt-replication-mcp
-claude mcp add forrt-replication -s user -- forrt-replication-mcp
+pipx install forrt-research-mcp
+claude mcp add forrt-research -s user -- forrt-research-mcp
 ```
 
 User-scoped (`-s user`) so it is available in every session and folder, and does
 not clash with a per-repo config. For other agents, the stdio command is
-`forrt-replication-mcp`.
+`forrt-research-mcp`.
 
 ```bash
 # optional
