@@ -68,9 +68,12 @@ loop. The division this server is built around:
 
 | The model proposes | This server disposes |
 |---|---|
-| Which sentence is the claim | Whether that sentence is in the PDF |
-| How to phrase the AIDA | Where it is, and under what SHA-256 |
-| Which claim type and CiTO relation apply | What prior chains already claimed |
+| Which sentence is the claim | Whether that sentence is in the PDF, where, under what SHA-256 |
+| How to phrase the AIDA | What fields the template actually has, and their caps |
+| Which claim type or CiTO relation applies | Which values the form will actually accept |
+| Which Wikidata topic is meant | Whether that QID exists and is of the right type |
+| Which paper to cite | Whether that DOI resolves, and to what |
+| Whether to extend or dispute prior work | What prior chains already claimed |
 
 ## Install
 
@@ -153,6 +156,62 @@ analysis over a different period and was not tested.
 The unprojected response, for debugging the graph or an upstream data problem.
 Large; prefer `constellation`.
 
+### `template_fields(step, live=True)` · `vocabulary(name, live=True)` · `list_schemas()`
+
+A nanopub template **is** the schema for its chain step, so these turn "never
+invent a field name" and "never invent a claim type" from rules an agent has to
+remember into a lookup that can only return real values.
+
+`template_fields` returns the real field ids, prompts, required/repeatable
+flags, and the `regex` / `prefix` / `datatype` constraints — which is where the
+Quote template's character cap actually lives, rather than in a hand-written
+doc that drifts. `step` accepts `05_outcome`, `05`, or `outcome`.
+
+`vocabulary` returns the allowed values of a controlled vocabulary, taken from
+the real restricted-choice field:
+
+| Name | From | Terms |
+|---|---|---|
+| `claim_type` | `03_claim.forrtType` | 7 |
+| `study_type` | `04_study.type` | 3 — the Reproduction vs Replication distinction |
+| `validation_status` | `05_outcome.validationStatus` | 5 |
+| `confidence_level` | `05_outcome.confidenceLevel` | 5 |
+| `cito_relation` | `06_citation.cites` | 43, via a separate value-list nanopub |
+| `question_type` | `01_pico.type` | 5 |
+
+Both fetch live by default and fall back to a **bundled snapshot** when the
+network is unavailable — always reporting which was used, and setting
+`driftedFromSnapshot` when the upstream template has been superseded. A drifted
+result means the live values win and this package needs re-vendoring; it is a
+loud, reviewable event rather than slow silent divergence.
+
+`cito_relation` is the one vocabulary that cannot be resolved offline: it lives
+in a separate value-list nanopub. Offline it returns `source:
+"unavailable-offline"` with a warning rather than an empty list, because an
+empty list reads as "no valid values."
+
+### `resolve_doi(doi)`
+
+Does this DOI resolve, and to what? `resolves: false` means it is not
+registered — **a well-formed DOI is not a real one**, and a fabricated one is
+indistinguishable from a genuine one until something asks the registry. Returns
+the registered title, authors, year and container so you can confirm it is the
+paper you meant, not merely a paper that exists. Accepts bare, URL, and `doi:`
+forms. A 5xx is reported as transient rather than as a bad DOI.
+
+### `wikidata_lookup(query, expected_type="", limit=5)`
+
+Real Wikidata candidates for a term, with their actual P31/P279 types. Pass
+`expected_type` as a QID and each candidate is marked `typeMatches`.
+
+It deliberately **does not choose** — picking the right sense of an ambiguous
+label is a judgement. Searching `Bombus` with `Q16521` (taxon) returns the
+insect genus as a match and *the album of the same name* as not, which is
+exactly the failure worth catching before a QID gets signed into a nanopub.
+Candidates are annotated, never filtered: a near miss is often the informative
+result. Zero candidates means leave the field empty — never fall back to a QID
+from memory.
+
 ## Upstream quirks this handles
 
 Found by probing live data rather than reading the API contract, and each one is
@@ -195,9 +254,15 @@ pip install -e '.[dev]'
 pytest
 ```
 
-Tests are hermetic and need no network: the constellation fixture is a real
-recorded `/np/constellation` response, and quote tests build minimal PDFs
-in-process that reproduce the extraction artifacts deliberately.
+All 101 tests are hermetic and need no network, no API key, and no live
+service: the constellation fixtures are real recorded `/np/constellation`
+responses, quote tests build minimal PDFs in-process that reproduce the
+extraction artifacts deliberately, and the template/DOI/Wikidata tests stub HTTP
+with recorded payloads. The suite stays green through an upstream outage.
+
+The bundled template snapshot under `src/forrt_research_mcp/data/` is vendored
+from `ScienceLiveHub/forrt-replication-template`, as is `template_spec.py`.
+Re-vendor when `template_fields` reports `driftedFromSnapshot`.
 
 ## License
 
