@@ -28,6 +28,7 @@ from .api import ApiError
 from .constellation import fetch as _fetch
 from .constellation import prior_work as _prior_work
 from .constellation import summary as _summary
+from .chain import verify_chain as _verify_chain
 from .drafts import validate_draft as _validate_draft
 from .drafts import validate_drafts as _validate_drafts
 from .grounding import GroundingError
@@ -319,6 +320,39 @@ def validate_drafts(directory: str, live: bool = True) -> dict:
     """
     try:
         return {"ok": True, **_validate_drafts(directory, live=live)}
+    except ApiError as e:
+        return _fail(e)
+
+
+@mcp.tool()
+def verify_chain(published_path: str, repo_url: str = "") -> dict:
+    """Verify a published FORRT chain. Run this before announcing it anywhere.
+
+    Point it at a `nanopubs/PUBLISHED.md` ledger (or the directory holding one).
+    Read-only: it never edits, retracts or supersedes — a failing row is for a
+    human to act on. `green` is true only when nothing failed.
+
+    What it checks:
+      - every required step (01-06) has a URI in the ledger;
+      - every URI is really published — present in the constellation, or, for
+        the upstream anchors the walk does not reach, served as RDF by the
+        `w3id.org/np/` resolver;
+      - the Outcome's repository resolves (a Zenodo **version** DOI is the
+        expected value — it pins the archived state, where a GitHub URL would
+        be a moving target);
+      - every DOI the chain cites resolves;
+      - **the CiTO relation agrees with the Outcome's verdict** — Validated
+        implies confirms, PartiallySupported implies qualifies, Contradicted
+        implies disputes. A mismatch means the Outcome and the Citation
+        disagree about what the replication found, which is the failure most
+        worth catching before anyone reads the chain.
+
+    A step reported as "not enumerated by the walk but its TriG resolves" is
+    fine, not a warning: the constellation legitimately stops short of Quote,
+    AIDA and Claim.
+    """
+    try:
+        return {"ok": True, **_verify_chain(published_path, repo_url)}
     except ApiError as e:
         return _fail(e)
 

@@ -190,6 +190,42 @@ in a separate value-list nanopub. Offline it returns `source:
 "unavailable-offline"` with a warning rather than an empty list, because an
 empty list reads as "no valid values."
 
+### `verify_chain(published_path, repo_url="")`
+
+The final check before announcing a chain. Point it at a `nanopubs/PUBLISHED.md`
+ledger; `green` is true only when nothing failed. Read-only — it never edits,
+retracts or supersedes.
+
+| Check | What it means |
+|---|---|
+| ledger | every required step (01–06) has a URI |
+| reachable | every URI is really published |
+| repository | the Outcome's archived version DOI resolves |
+| cited-doi | every DOI the chain cites resolves |
+| verdict-relation | **the CiTO relation agrees with the Outcome's verdict** |
+
+That last one is the failure most worth catching: `Validated` implies
+`confirms`, `PartiallySupported` implies `qualifies`, `Contradicted` implies
+`disputes`. A mismatch means the Outcome and the Citation disagree about what
+the replication actually found — a chain that cites `confirms` for a paper it
+contradicted is worse than no chain at all.
+
+**A constellation alone cannot verify a chain**, which is why this does not try.
+On both real chains the walk stops short of the upstream anchors, so anything it
+does not enumerate is checked by fetching its TriG from the bare
+`w3id.org/np/` resolver — the `/sciencelive/np/` form serves an HTML viewer that
+answers 200 and would pass a status-only check while serving no nanopub. A row
+reading *"not enumerated by the walk but its TriG resolves"* is a pass, not a
+warning.
+
+The Outcome's repository is expected to be a **Zenodo version DOI**, not a
+GitHub URL: a version DOI pins the archived state the outcome was computed
+from, where `github.com/ORG/REPO` is a moving target. Both are accepted; a DOI
+is checked by resolving it, a URL by comparing it to `repo_url`.
+
+Both published chains verify green, matching the hand-run verification recorded
+in marine-heatwave's ledger.
+
 ### `validate_draft(path)` · `validate_drafts(directory)`
 
 The pre-flight checklist in `docs/forrt-form-fields.md`, actually executed. One
@@ -288,7 +324,7 @@ pip install -e '.[dev]'
 pytest
 ```
 
-All 125 tests are hermetic and need no network, no API key, and no live
+All 149 tests are hermetic and need no network, no API key, and no live
 service: the constellation fixtures are real recorded `/np/constellation`
 responses, quote tests build minimal PDFs in-process that reproduce the
 extraction artifacts deliberately, and the template/DOI/Wikidata tests stub HTTP
