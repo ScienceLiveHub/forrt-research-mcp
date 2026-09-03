@@ -45,8 +45,9 @@ with a dedicated tool, because a quotation is the one field whose correctness
 can be *proved* rather than reviewed.
 
 For a study starting from scratch, the Claim is **your own hypothesis**, derived
-from your own question or from the work you are building on. The FORRT Claim template's `source` is optional, so it
-needs no external paper — and the Claim-before-Study order then reads as
+from your own question or from the work you are building on. The FORRT Claim
+template's `source` is optional, so it needs no external paper — and the
+Claim-before-Study order then reads as
 **pre-registration**, not as a mismatch. `verify_chain` takes a `mode`
 (`auto` / `replication` / `reproduction` / `new_research`) that changes only what
 is *required*: from-scratch research has no existing work to cite, so no CiTO
