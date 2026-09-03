@@ -28,8 +28,15 @@ from .api import ApiError
 from .constellation import fetch as _fetch
 from .constellation import prior_work as _prior_work
 from .constellation import summary as _summary
+from .grounding import GroundingError
+from .grounding import resolve_doi as _resolve_doi
+from .grounding import wikidata_lookup as _wikidata_lookup
 from .quotes import QuoteError
 from .quotes import verify_quote as _verify_quote
+from .templates import VOCABULARIES
+from .templates import steps as _steps
+from .templates import template_fields as _template_fields
+from .templates import vocabulary as _vocabulary
 
 mcp = FastMCP("forrt-research")
 
@@ -146,6 +153,120 @@ def constellation_raw(uri: str, depth: int = 5, max_nodes: int = 80) -> dict:
     try:
         return {"ok": True, **_fetch(uri, depth=depth, max_nodes=max_nodes)}
     except ApiError as e:
+        return _fail(e)
+
+
+@mcp.tool()
+def template_fields(step: str, live: bool = True) -> dict:
+    """The exact form fields of one FORRT chain step, from the live template.
+
+    Call this BEFORE drafting any nanopub field. A nanopub template *is* the
+    schema for its step, so this is what makes "never invent a field name" a
+    lookup rather than a rule you have to remember: it returns the real field
+    ids, prompts, whether each is required or repeatable, the length/format
+    constraints (`regex`, `prefix`, `datatype` — where the Quote template's
+    character cap actually lives), and, for choice fields, the allowed values.
+
+    `step` accepts `05_outcome`, `05`, or `outcome`. Known steps: 01_quote,
+    01_pico, 01_pcc, 02_aida, 03_claim, 04_study, 05_outcome, 06_citation,
+    07_research_software, 08_synthesis.
+
+    Check `source`: `live` means fetched from the nanopub network just now;
+    `bundled-snapshot` means the network was unavailable and these are vendored
+    values that may be stale. `driftedFromSnapshot: true` means the template was
+    superseded upstream — the live values win, and this package needs re-vendoring.
+    """
+    try:
+        return {"ok": True, **_template_fields(step, live=live)}
+    except ApiError as e:
+        return _fail(e)
+
+
+@mcp.tool()
+def vocabulary(name: str, live: bool = True) -> dict:
+    """The allowed values of a FORRT controlled vocabulary, from its template.
+
+    Use it whenever a draft needs a claim type, a study type, a validation
+    status, a confidence level, a CiTO relation, or a question type. Every term
+    comes from the real restricted-choice field on the real template (or the
+    value-list nanopub it points at), so a value returned here is one the form
+    will actually accept — and nothing else is.
+
+    Names: claim_type, study_type, validation_status, confidence_level,
+    cito_relation, question_type.
+
+    Two worth reading before you draft:
+      - `study_type` carries the Reproduction vs Replication distinction
+        (same data + same methods, vs different data and/or methods, or both).
+      - `validation_status` is the Outcome verdict. Pick it from the evidence,
+        not from what would be a nicer result; a contradicted replication is
+        publishable and an overclaimed one is not.
+    """
+    try:
+        return {"ok": True, **_vocabulary(name, live=live)}
+    except ApiError as e:
+        return _fail(e)
+
+
+@mcp.tool()
+def list_schemas() -> dict:
+    """Which chain steps and vocabularies this server can look up.
+
+    Cheap, offline, and no network. Call it first if you are unsure what to pass
+    to `template_fields` or `vocabulary`.
+    """
+    return {
+        "ok": True,
+        "steps": _steps(),
+        "vocabularies": {
+            name: {"step": step, "field": field}
+            for name, (step, field) in sorted(VOCABULARIES.items())
+        },
+    }
+
+
+@mcp.tool()
+def resolve_doi(doi: str) -> dict:
+    """Does this DOI resolve, and to what?
+
+    Call it on every DOI destined for a nanopub field, `CITATION.cff`, or a CiTO
+    citation. `resolves: false` means the DOI is not registered — do not publish
+    it, however well-formed it looks. A well-formed DOI is not a real one, and a
+    fabricated one is indistinguishable from a genuine one until something asks
+    the registry.
+
+    On success it returns the registered title, authors, year, container and
+    type, so you can confirm it is the paper you mean rather than merely a paper
+    that exists. Accepts bare (`10.…`), URL, or `doi:`-prefixed forms.
+    """
+    try:
+        return {"ok": True, **_resolve_doi(doi)}
+    except GroundingError as e:
+        return _fail(e)
+
+
+@mcp.tool()
+def wikidata_lookup(query: str, expected_type: str = "", limit: int = 5) -> dict:
+    """Find real Wikidata items for a term, and type-check them.
+
+    Call it for every Wikidata topic or keyword destined for a nanopub field.
+    It returns candidates with their descriptions and real P31/P279 types; it
+    deliberately does NOT choose one, because picking the right sense of an
+    ambiguous label is a judgement. What it guarantees is that the QID you
+    publish exists and is what you say it is.
+
+    Pass `expected_type` as a QID (e.g. `Q16521` taxon, `Q11862829` academic
+    discipline) and each candidate is marked `typeMatches` from its actual
+    statements. Candidates are annotated, never filtered — a near miss is often
+    the informative result. Searching "Bombus" with `Q16521`, for instance,
+    returns the insect genus as a match and the album of the same name as not.
+
+    A zero-candidate result means leave the field empty or try another label.
+    Never fall back to a QID from memory.
+    """
+    try:
+        return {"ok": True, **_wikidata_lookup(query, expected_type, limit)}
+    except GroundingError as e:
         return _fail(e)
 
 
