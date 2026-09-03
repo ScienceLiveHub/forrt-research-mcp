@@ -190,6 +190,40 @@ in a separate value-list nanopub. Offline it returns `source:
 "unavailable-offline"` with a warning rather than an empty list, because an
 empty list reads as "no valid values."
 
+### `validate_draft(path)` · `validate_drafts(directory)`
+
+The pre-flight checklist in `docs/forrt-form-fields.md`, actually executed. One
+call checks a drafted nanopub end to end: field ids against the live template,
+choice values against its enumeration, length caps against its regex, DOIs
+against the registry, QIDs against Wikidata. `publishable` is true only when
+nothing came back as an error.
+
+This is the composition the other tools exist for — individually they answer
+"is this value real?", together they answer "is this draft publishable, and if
+not, exactly where is it wrong?"
+
+**Three placeholder conventions, and only one is a problem.** Getting this wrong
+made the checker useless on real drafts, so each is handled explicitly:
+
+| In a draft | Meaning | Severity |
+|---|---|---|
+| `«URI of step 05 …»` | back-reference; the chain wizard fills it from the published step | info |
+| `{{ZENODO_VERSION_DOI}}` | release-time token; the release workflow substitutes it | warning |
+| anything else standing in for a value | genuinely unfilled | **error** |
+
+A draft whose required fields are nearly all empty is reported once as an
+unfilled skeleton — "it has not been drafted yet" — rather than as a wall of
+per-field errors.
+
+**What it cannot see.** Values a draft puts in prose or a markdown table rather
+than behind a `<!-- field: … -->` marker are reported as `coverage` warnings,
+never as missing. The CiTO step's citation list is the known case: `cites` and
+`cited` live in a table in both repos checked.
+
+Validated against two real published chains (marine-heatwave and Sado estuary):
+all six published steps pass in both, with the only remaining flags being an
+unpublished step 07 and the release tokens above.
+
 ### `resolve_doi(doi)`
 
 Does this DOI resolve, and to what? `resolves: false` means it is not
@@ -254,7 +288,7 @@ pip install -e '.[dev]'
 pytest
 ```
 
-All 101 tests are hermetic and need no network, no API key, and no live
+All 125 tests are hermetic and need no network, no API key, and no live
 service: the constellation fixtures are real recorded `/np/constellation`
 responses, quote tests build minimal PDFs in-process that reproduce the
 extraction artifacts deliberately, and the template/DOI/Wikidata tests stub HTTP

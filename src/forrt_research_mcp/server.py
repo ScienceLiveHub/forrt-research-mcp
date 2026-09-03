@@ -28,6 +28,8 @@ from .api import ApiError
 from .constellation import fetch as _fetch
 from .constellation import prior_work as _prior_work
 from .constellation import summary as _summary
+from .drafts import validate_draft as _validate_draft
+from .drafts import validate_drafts as _validate_drafts
 from .grounding import GroundingError
 from .grounding import resolve_doi as _resolve_doi
 from .grounding import wikidata_lookup as _wikidata_lookup
@@ -267,6 +269,57 @@ def wikidata_lookup(query: str, expected_type: str = "", limit: int = 5) -> dict
     try:
         return {"ok": True, **_wikidata_lookup(query, expected_type, limit)}
     except GroundingError as e:
+        return _fail(e)
+
+
+@mcp.tool()
+def validate_draft(path: str, step: str = "", live: bool = True) -> dict:
+    """Check one drafted nanopub against its template and the real world.
+
+    Run this on every draft before publishing. It is the pre-flight checklist in
+    `docs/forrt-form-fields.md`, actually executed: field ids checked against the
+    live template, choice values against the template's own enumeration, length
+    caps against its regex, DOIs against the registry, Wikidata QIDs against
+    Wikidata.
+
+    `publishable` is true only when there are no errors. Severities:
+
+      error    would publish something false, or be rejected by the form
+      warning  a human should look, but it may be intentional
+      info     checked and fine, or deliberately not checked
+
+    Three placeholder conventions are distinguished, because only one is a
+    problem: `«URI of step 05 …»` is a back-reference the chain wizard fills
+    (info); `{{ZENODO_VERSION_DOI}}` is a release-time token the release
+    workflow substitutes (warning — confirm the release ran); anything else
+    still standing in for a value is an error.
+
+    `step` is inferred from the filename (`05_outcome.md`); pass it explicitly
+    for a file named otherwise. A draft whose required fields are nearly all
+    empty is reported once as an unfilled skeleton rather than field by field.
+    """
+    try:
+        return {"ok": True, **_validate_draft(path, step, live=live)}
+    except ApiError as e:
+        return _fail(e)
+
+
+@mcp.tool()
+def validate_drafts(directory: str, live: bool = True) -> dict:
+    """Check every draft in a `nanopubs/drafts/` directory at once.
+
+    The whole-chain pre-flight: run it before starting Phase 5b, and again
+    before announcing. Returns per-draft results plus totals, with
+    `publishable` true only when no draft has an error.
+
+    Note what it cannot see: values a draft puts in prose or a markdown table
+    rather than behind a `<!-- field: … -->` marker are reported as
+    `coverage` warnings, not as missing. The CiTO step's citation list is the
+    known case.
+    """
+    try:
+        return {"ok": True, **_validate_drafts(directory, live=live)}
+    except ApiError as e:
         return _fail(e)
 
 
