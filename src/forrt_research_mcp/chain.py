@@ -36,7 +36,12 @@ STEP_NAMES = {
     "04": "FORRT Replication Study", "05": "FORRT Replication Outcome",
     "06": "CiTO Citation", "07": "Research Software", "08": "Research Synthesis",
 }
+# Steps a chain must publish. A CiTO (06) asserts a relation to an *existing*
+# work, so a study starting from scratch has nothing to cite and legitimately
+# stops at the Outcome. Every other step is required in all three modes.
 REQUIRED_STEPS = ("01", "02", "03", "04", "05", "06")
+REQUIRED_STEPS_NEW_RESEARCH = ("01", "02", "03", "04", "05")
+MODES = ("auto", "replication", "reproduction", "new_research")
 # Steps the constellation walk enumerates as chain steps; the rest are checked
 # by direct TriG fetch.
 ENUMERATED = {"04": "Study", "05": "Outcome", "06": "CiTO", "03": "Claim",
@@ -176,6 +181,18 @@ def _check_verdict_relation(view: dict, apex_relations: list[str]) -> list[dict]
                             f"{chain['verdict']!r}", verdict=chain["verdict"]))
             continue
         names = [r.rsplit("/", 1)[-1] for r in relations]
+        verdict_vocabulary = {v.rsplit("/", 1)[-1] for v in RELATION_FROM_VERDICT.values()}
+        if not verdict_vocabulary.intersection(names):
+            # The chain does not cite the target with a verdict-bearing relation
+            # at all — e.g. citesAsAuthority for a method paper, or
+            # citesAsDataSource. That is a different kind of citation, not a
+            # disagreement with the Outcome, so there is nothing to cross-check.
+            out.append(_row("info", "verdict-relation",
+                            f"cited with {', '.join(names)}, which asserts no "
+                            f"verdict on the cited work — no cross-check applies "
+                            f"(verdict is {chain['verdict']})",
+                            verdict=chain["verdict"], actual=relations))
+            continue
         if expected.rsplit("/", 1)[-1] in names:
             out.append(_row("pass", "verdict-relation",
                             f"verdict {chain['verdict']} matches CiTO "
@@ -191,13 +208,18 @@ def _check_verdict_relation(view: dict, apex_relations: list[str]) -> list[dict]
     return out
 
 
-def _check_cited_dois(view: dict) -> list[dict]:
-    paper = view["replicatedPaper"]
+def _check_cited_dois(view: dict, mode: str) -> list[dict]:
+    paper = view["citedPaper"]
     targets = paper.get("allCitedTargets") or ([paper["doi"]] if paper["doi"] else [])
     if not targets:
+        if mode == "new_research":
+            return [_row("info", "cited-doi",
+                         "the chain cites no DOI, which is expected for research "
+                         "that does not start from an existing work")]
         return [_row("fail", "cited-doi",
-                     "the chain cites no DOI — nothing identifies the paper "
-                     "under replication")]
+                     f"the chain cites no DOI — nothing identifies the work this "
+                     f"{mode} is of. If this study started from scratch, pass "
+                     f"mode='new_research'")]
 
     out: list[dict] = []
     for target in targets:
@@ -224,8 +246,31 @@ def _check_cited_dois(view: dict) -> list[dict]:
     return out
 
 
-def verify_chain(published_path: str, repo_url: str = "") -> dict:
-    """Verify the chain listed in a `nanopubs/PUBLISHED.md` ledger."""
+def _resolve_mode(mode: str, published: dict) -> str:
+    """Which of the three shapes this chain is.
+
+    `auto` infers it: a chain with no CiTO step published did not start from an
+    existing work. Reproduction and replication are not distinguishable from the
+    ledger alone (the difference lives in the Study's `type` field, which the
+    constellation does not expose), and they verify identically — so `auto`
+    reports the neutral `replication` for both. Pass the mode explicitly when
+    you want the message wording to match your study.
+    """
+    if mode not in MODES:
+        raise ApiError(f"unknown mode {mode!r}; expected one of {', '.join(MODES)}")
+    if mode != "auto":
+        return mode
+    return "replication" if "06" in published else "new_research"
+
+
+def verify_chain(published_path: str, repo_url: str = "", mode: str = "auto") -> dict:
+    """Verify the chain listed in a `nanopubs/PUBLISHED.md` ledger.
+
+    `mode` is one of `auto` (default), `replication`, `reproduction` or
+    `new_research`. It changes only what is *required*: research that starts
+    from scratch has no existing work to cite, so no CiTO step and no cited DOI
+    are expected. Everything else is checked identically in all three.
+    """
     path = Path(published_path).expanduser()
     if path.is_dir():
         path = path / "PUBLISHED.md"
@@ -238,12 +283,19 @@ def verify_chain(published_path: str, repo_url: str = "") -> dict:
             f"no published URIs found in {path} — expected table rows like "
             f"`| 05 | … | https://w3id.org/np/RA… |`")
 
+    resolved_mode = _resolve_mode(mode, published)
+    required = (REQUIRED_STEPS_NEW_RESEARCH if resolved_mode == "new_research"
+                else REQUIRED_STEPS)
+
     rows: list[dict] = []
-    missing = [s for s in REQUIRED_STEPS if s not in published]
-    for step in missing:
+    for step in [s for s in required if s not in published]:
         rows.append(_row("fail", "ledger",
                          f"step {step} ({STEP_NAMES[step]}) has no URI — the "
                          f"chain is incomplete", step=step))
+    if resolved_mode == "new_research" and "06" not in published:
+        rows.append(_row("info", "ledger",
+                         "no CiTO step, which is expected for research that does "
+                         "not start from an existing work"))
 
     view = _summary(_entry_uri(published))
 
@@ -261,14 +313,15 @@ def verify_chain(published_path: str, repo_url: str = "") -> dict:
     rows += _check_repository(view, published, repo_url)
     apex_relations = (view["apexCito"] or {}).get("relations", [])
     rows += _check_verdict_relation(view, apex_relations)
-    rows += _check_cited_dois(view)
+    rows += _check_cited_dois(view, resolved_mode)
 
     counts = {s: sum(1 for r in rows if r["status"] == s)
               for s in ("pass", "fail", "warn", "skip", "info")}
     return {
         "ledger": str(path),
+        "mode": resolved_mode,
         "stepsPublished": sorted(published),
-        "replicatedPaper": view["replicatedPaper"],
+        "citedPaper": view["citedPaper"],
         "green": counts["fail"] == 0,
         "counts": counts,
         "rows": sorted(rows, key=lambda r: ("fail", "warn", "skip", "info", "pass")

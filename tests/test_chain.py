@@ -42,7 +42,7 @@ def view(*, verdict="Validated", relations=("confirms",), repository=ARCHIVE,
                       "relations": list(relations), "targets": [PAPER]})
     return {
         "entry": CITO,
-        "replicatedPaper": {"doi": PAPER, "allCitedTargets": [PAPER],
+        "citedPaper": {"doi": PAPER, "allCitedTargets": [PAPER],
                             "source": "cito-citedTargets"},
         "chains": [{"id": "c1", "outcomeUri": OUTCOME, "verdict": verdict,
                     "confidence": "HighConfidence",
@@ -210,7 +210,7 @@ class TestCitedDois:
 
     def test_a_chain_citing_nothing_fails(self, tmp_path, monkeypatch):
         empty = view()
-        empty["replicatedPaper"] = {"doi": "", "allCitedTargets": [],
+        empty["citedPaper"] = {"doi": "", "allCitedTargets": [],
                                     "source": "unknown"}
         monkeypatch.setattr(C, "_summary", lambda uri, **kw: empty)
         assert C.verify_chain(write(tmp_path, ledger()))["green"] is False
@@ -221,3 +221,79 @@ def test_failures_are_reported_before_passes(tmp_path, monkeypatch):
         verdict="Contradicted", relations=("confirms",)))
     rows = C.verify_chain(write(tmp_path, ledger()))["rows"]
     assert rows[0]["status"] == "fail"
+
+
+class TestNonVerdictCitations:
+    """A from-scratch study cites a method paper or data source, not an original
+    it agrees or disagrees with. Cross-checking the verdict against such a
+    relation would report a failure on a perfectly correct chain."""
+
+    @pytest.mark.parametrize("relation", [
+        "citesAsAuthority", "citesAsDataSource", "usesMethodIn",
+        "obtainsBackgroundFrom", "extends",
+    ])
+    def test_a_non_verdict_relation_is_not_a_disagreement(
+            self, tmp_path, monkeypatch, relation):
+        monkeypatch.setattr(C, "_summary", lambda uri, **kw: view(
+            verdict="Validated", relations=(relation,)))
+        result = C.verify_chain(write(tmp_path, ledger()))
+        assert result["green"] is True
+        row = [r for r in result["rows"] if r["check"] == "verdict-relation"][0]
+        assert row["status"] == "info"
+        assert "asserts no verdict" in row["message"]
+
+    def test_a_wrong_verdict_relation_still_fails(self, tmp_path, monkeypatch):
+        """The check must keep its teeth where it applies."""
+        monkeypatch.setattr(C, "_summary", lambda uri, **kw: view(
+            verdict="Contradicted", relations=("confirms",)))
+        assert C.verify_chain(write(tmp_path, ledger()))["green"] is False
+
+    def test_a_mixed_citation_is_still_cross_checked(self, tmp_path, monkeypatch):
+        """Citing both a data source AND a verdict relation: the verdict one
+        still has to agree."""
+        monkeypatch.setattr(C, "_summary", lambda uri, **kw: view(
+            verdict="Contradicted", relations=("citesAsDataSource", "confirms")))
+        assert C.verify_chain(write(tmp_path, ledger()))["green"] is False
+
+
+class TestModes:
+    """Reproduction, replication and from-scratch research all verify here.
+    Only what is REQUIRED differs: a study that starts from scratch has no
+    existing work to cite."""
+
+    def test_a_from_scratch_chain_without_a_cito_is_green(self, tmp_path, monkeypatch):
+        no_citation = view()
+        no_citation["citedPaper"] = {"doi": "", "allCitedTargets": [],
+                                     "source": "unknown"}
+        no_citation["apexCito"] = None
+        monkeypatch.setattr(C, "_summary", lambda uri, **kw: no_citation)
+        text = ledger().replace(f"| 06 | Template name | {CITO} | 2026-08-15 |\n", "")
+        result = C.verify_chain(write(tmp_path, text))
+        assert result["mode"] == "new_research"
+        assert result["green"] is True
+
+    def test_the_same_chain_fails_when_declared_a_replication(self, tmp_path, monkeypatch):
+        """A replication really does need something to cite."""
+        no_citation = view()
+        no_citation["citedPaper"] = {"doi": "", "allCitedTargets": [],
+                                     "source": "unknown"}
+        monkeypatch.setattr(C, "_summary", lambda uri, **kw: no_citation)
+        text = ledger().replace(f"| 06 | Template name | {CITO} | 2026-08-15 |\n", "")
+        result = C.verify_chain(write(tmp_path, text), mode="replication")
+        assert result["green"] is False
+        assert any("mode='new_research'" in r["message"] for r in result["rows"])
+
+    def test_auto_infers_replication_when_a_cito_is_published(self, tmp_path):
+        assert C.verify_chain(write(tmp_path, ledger()))["mode"] == "replication"
+
+    @pytest.mark.parametrize("mode", ["replication", "reproduction"])
+    def test_reproduction_and_replication_verify_identically(self, tmp_path, mode):
+        """The difference lives in the Study's `type`, which the constellation
+        does not expose — so verification cannot and should not distinguish."""
+        result = C.verify_chain(write(tmp_path, ledger()), mode=mode)
+        assert result["green"] is True
+        assert result["mode"] == mode
+
+    def test_an_unknown_mode_lists_the_real_ones(self, tmp_path):
+        with pytest.raises(ApiError, match="expected one of"):
+            C.verify_chain(write(tmp_path, ledger()), mode="primary")

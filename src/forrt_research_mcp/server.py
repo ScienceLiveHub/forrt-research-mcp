@@ -1,11 +1,12 @@
 """MCP server for producing verifiable FORRT nanopublication chains.
 
-Serves replications and reproductions today. New research from a research
-question is served for the Question -> AIDA -> Claim half of the chain; the
-Study/Outcome half is replication-shaped in the current Science Live templates
-(`scope` = "what part of the claim is reproduced", `validationStatus` =
-Validated/Contradicted *of an original*) and needs new templates upstream. See
-the README's Scope section — do not bend those fields to fit primary research.
+Serves all three shapes of study: reproduction (same data, same methods),
+replication (different data and/or methods), and research that starts from
+scratch. The chain is the same either way — anchor (Quote or PICO/PCC question)
+-> AIDA -> Claim -> Study -> Outcome -> CiTO — and for a from-scratch study the
+Claim is your own hypothesis, which makes the Claim-before-Study order a
+pre-registration rather than a mismatch. See the README's Scope section for the
+one place the templates still assume an original.
 
 Run:  forrt-research-mcp          (stdio transport)
 Add user-scoped:
@@ -70,7 +71,7 @@ def constellation(uri: str, depth: int = 5, max_nodes: int = 80) -> dict:
     and the Quote/Question anchors attributable to this paper — and drops the
     rest, reporting how much it dropped under `neighbourhood`.
 
-    Read `replicatedPaper` rather than assuming: the API's own top-level
+    Read `citedPaper` rather than assuming: the API's own top-level
     `paperDoi` is a frequency vote across the whole walk and can name a
     neighbour's paper, so this derives the paper from the chain's CiTO citation
     and sets `disagreesWithReported` when the two differ.
@@ -325,7 +326,7 @@ def validate_drafts(directory: str, live: bool = True) -> dict:
 
 
 @mcp.tool()
-def verify_chain(published_path: str, repo_url: str = "") -> dict:
+def verify_chain(published_path: str, repo_url: str = "", mode: str = "auto") -> dict:
     """Verify a published FORRT chain. Run this before announcing it anywhere.
 
     Point it at a `nanopubs/PUBLISHED.md` ledger (or the directory holding one).
@@ -350,9 +351,16 @@ def verify_chain(published_path: str, repo_url: str = "") -> dict:
     A step reported as "not enumerated by the walk but its TriG resolves" is
     fine, not a warning: the constellation legitimately stops short of Quote,
     AIDA and Claim.
+
+    `mode` — `auto` (default), `replication`, `reproduction` or `new_research`.
+    It changes only what is REQUIRED. Research that starts from scratch has no
+    existing work to cite, so no CiTO step and no cited DOI are expected, and
+    `auto` infers that from the absence of a published step 06. Everything else
+    is checked identically in all three. Reproduction and replication verify the
+    same way; pass one explicitly only to make the wording match your study.
     """
     try:
-        return {"ok": True, **_verify_chain(published_path, repo_url)}
+        return {"ok": True, **_verify_chain(published_path, repo_url, mode)}
     except ApiError as e:
         return _fail(e)
 

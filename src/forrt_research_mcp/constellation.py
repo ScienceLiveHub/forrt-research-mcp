@@ -94,7 +94,7 @@ def _quote_text_and_comment(node: dict) -> tuple[str, str, str]:
     return quoted, (others[0] if others else ""), "excerpt-matched-to-label"
 
 
-def replicated_paper(raw: dict) -> dict:
+def cited_paper(raw: dict) -> dict:
     """Which paper this constellation's chains actually cite.
 
     Authoritative source is the CiTO's `citedTargets` (that IS the citation).
@@ -209,11 +209,11 @@ def summary(uri: str, *, depth: int = 5, max_nodes: int = 80,
 
     apex = data.get("apexCito") or None
     synthesis = data.get("researchSynthesis") or None
-    paper = replicated_paper(data)
+    paper = cited_paper(data)
 
     return {
         "entry": data.get("entry") or uri,
-        "replicatedPaper": paper,
+        "citedPaper": paper,
         "chains": chains,
         "upstream": _upstream_nodes(data, paper["doi"]),
         "apexCito": {
@@ -268,7 +268,7 @@ def prior_work(uri: str, *, base: str | None = None, key: str | None = None,
         })
 
     return {
-        "replicatedPaper": view["replicatedPaper"],
+        "citedPaper": view["citedPaper"],
         "replicationCount": len(entries),
         "verdicts": sorted({e["verdict"] for e in entries if e["verdict"]}),
         "priorWork": entries,

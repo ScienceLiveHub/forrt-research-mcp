@@ -2,8 +2,8 @@
 
 An MCP server for **producing** verifiable FORRT nanopublication chains — the
 tools a researcher needs while doing the work, not while looking for it. It
-serves replications and reproductions today, and is named for where it is going:
-starting new research from a research question, on the same rails.
+serves all three shapes of study on the same rails: reproduction, replication,
+and research that starts from scratch.
 
 It is the third of three servers that compose:
 
@@ -17,29 +17,44 @@ Built for the workflow in
 [`forrt-replication-template`](https://github.com/ScienceLiveHub/forrt-replication-template),
 but it needs nothing from that repo — any agent can call it.
 
-## Scope: what a FORRT chain can express today
+## Scope: reproduction, replication, and research from scratch
 
-The tool names here are deliberately neutral — `constellation`, `prior_work`,
-`verify_quote` — because the chain has two entry points, and the current Science
-Live templates serve only one of them end to end:
+All three work here, and they use the same chain:
 
-- **Chains that test an existing claim** work fully, whether paper-rooted (Quote)
-  or question-rooted (PICO / PCC): anchor → AIDA → Claim → Study → Outcome → CiTO.
-- **Genuinely new research** — you have a question, you run a study, you report a
-  finding — works for the *first half only*. Question → AIDA → Claim is clean,
-  because the FORRT Claim template takes your own `source` URI, so declaring your
-  own original claim is exactly what it is for. The second half is not: the
-  Replication Study template's fields are `scope` ("what part of the claim is
-  reproduced/replicated"), `methodology` ("how the claim is
-  reproduced/replicated") and `deviation` ("deviations from original
-  methodology"), and the Outcome's `conclusion` is "about the original claim"
-  with a `validationStatus` of Validated / PartiallySupported / Contradicted.
-  With no original, those fields have no referent.
+```
+anchor (Quote-with-comment | PICO / PCC question)
+   → AIDA → Claim → Study → Outcome → CiTO
+```
 
-Closing that needs new templates on the Science Live side — a Research Study /
-Research Finding pair — not a workaround in this server. Until then, publish the
-Question → AIDA → Claim half and say so, rather than bending replication fields
-into a shape they were not made for.
+For a study starting from scratch, the Claim is **your own hypothesis**, derived
+from your own question. The FORRT Claim template's `source` is optional, so it
+needs no external paper — and the Claim-before-Study order then reads as
+**pre-registration**, not as a mismatch. `verify_chain` takes a `mode`
+(`auto` / `replication` / `reproduction` / `new_research`) that changes only what
+is *required*: from-scratch research has no existing work to cite, so no CiTO
+step and no cited DOI are expected.
+
+**The one place the templates still assume an original** is the `study_type`
+vocabulary on `04_study`, whose three terms are all replication-flavoured
+(Replication Study, Reproduction Study, or both). There is no term for *an
+original study testing its own claim*. Three field prompts read oddly too —
+`scope` and `methodology` say "is reproduced/replicated", and the Outcome's
+`conclusion` says "about the original claim" — but they are only wording;
+`validationStatus` (validated / partially supported / contradicted /
+inconclusive / not tested) describes testing your own hypothesis perfectly well.
+
+So closing the gap is plausibly **one added vocabulary term and three reworded
+prompts**, not a new template family. When that lands, this server picks it up
+with no code change: `template_fields` and `vocabulary` fetch live, and
+`driftedFromSnapshot` flags the supersession so the vendored copy gets re-cut.
+
+> **A note on using "Reproduction Study" for from-scratch work.** It is a
+> reasonable workaround while the vocabulary lacks a better term, but the
+> template means the replication-science sense — *"direct reproduction: same
+> methodology, same tools"*, i.e. re-running someone else's analysis — not the
+> RSE sense of "my work is reproducible". Downstream consumers read it the first
+> way: `replication-radar`'s verdict overlay and `verified_claims` will present
+> the study as verification of an existing claim.
 
 ## Why a server and not a prompt
 
@@ -132,7 +147,7 @@ The FORRT chain(s) reachable from a published nanopub URI, projected to
 agent-size: chains with their steps in chain order, the apex CiTO, any Research
 Synthesis, and the Quote/Question anchors attributable to this paper.
 
-Read `replicatedPaper`, not the API's top-level `paperDoi` — see *Upstream
+Read `citedPaper`, not the API's top-level `paperDoi` — see *Upstream
 quirks* below.
 
 `stepsPresent` legitimately omits steps: a CiTO at the apex of a constellation
@@ -299,7 +314,7 @@ unrelated studies):
    paper (4 unrelated quotes) instead of Oliver et al. 2018, which the chain's
    CiTO actually cites — and it names **the same wrong paper** from the
    unrelated Sado-estuary entry point, so this is systemic, not one bad record.
-   `replicatedPaper` derives the paper from the CiTO and sets
+   `citedPaper` derives the paper from the CiTO and sets
    `disagreesWithReported` when the two differ.
 3. **The walk stops short, and missing does not mean unpublished.** Two real
    chains enumerated `[Claim, Study, Outcome]` and `[Study, Outcome, CiTO]`,
@@ -324,7 +339,7 @@ pip install -e '.[dev]'
 pytest
 ```
 
-All 149 tests are hermetic and need no network, no API key, and no live
+All 162 tests are hermetic and need no network, no API key, and no live
 service: the constellation fixtures are real recorded `/np/constellation`
 responses, quote tests build minimal PDFs in-process that reproduce the
 extraction artifacts deliberately, and the template/DOI/Wikidata tests stub HTTP
