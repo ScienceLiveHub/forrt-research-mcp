@@ -1,11 +1,12 @@
 """MCP server for producing verifiable FORRT nanopublication chains.
 
-Serves replications and reproductions today. New research from a research
-question is served for the Question -> AIDA -> Claim half of the chain; the
-Study/Outcome half is replication-shaped in the current Science Live templates
-(`scope` = "what part of the claim is reproduced", `validationStatus` =
-Validated/Contradicted *of an original*) and needs new templates upstream. See
-the README's Scope section — do not bend those fields to fit primary research.
+Serves all three shapes of study: reproduction (same data, same methods),
+replication (different data and/or methods), and research that starts from
+scratch. The chain is the same either way — anchor (Quote or PICO/PCC question)
+-> AIDA -> Claim -> Study -> Outcome -> CiTO — and for a from-scratch study the
+Claim is your own hypothesis, which makes the Claim-before-Study order a
+pre-registration rather than a mismatch. See the README's Scope section for the
+one place the templates still assume an original.
 
 Run:  forrt-research-mcp          (stdio transport)
 Add user-scoped:
@@ -28,6 +29,7 @@ from .api import ApiError
 from .constellation import fetch as _fetch
 from .constellation import prior_work as _prior_work
 from .constellation import summary as _summary
+from .chain import verify_chain as _verify_chain
 from .drafts import validate_draft as _validate_draft
 from .drafts import validate_drafts as _validate_drafts
 from .grounding import GroundingError
@@ -69,7 +71,7 @@ def constellation(uri: str, depth: int = 5, max_nodes: int = 80) -> dict:
     and the Quote/Question anchors attributable to this paper — and drops the
     rest, reporting how much it dropped under `neighbourhood`.
 
-    Read `replicatedPaper` rather than assuming: the API's own top-level
+    Read `citedPaper` rather than assuming: the API's own top-level
     `paperDoi` is a frequency vote across the whole walk and can name a
     neighbour's paper, so this derives the paper from the chain's CiTO citation
     and sets `disagreesWithReported` when the two differ.
@@ -189,20 +191,25 @@ def vocabulary(name: str, live: bool = True) -> dict:
     """The allowed values of a FORRT controlled vocabulary, from its template.
 
     Use it whenever a draft needs a claim type, a study type, a validation
-    status, a confidence level, a CiTO relation, or a question type. Every term
-    comes from the real restricted-choice field on the real template (or the
-    value-list nanopub it points at), so a value returned here is one the form
-    will actually accept — and nothing else is.
+    status, a confidence level, or a CiTO relation. Every term comes from the
+    real restricted-choice field on the real template (or the value-list nanopub
+    it points at), so a value returned here is one the form will actually accept
+    — and nothing else is.
 
     Names: claim_type, study_type, validation_status, confidence_level,
-    cito_relation, question_type.
+    cito_relation, pico_question_type.
 
-    Two worth reading before you draft:
+    Three worth reading before you draft:
       - `study_type` carries the Reproduction vs Replication distinction
         (same data + same methods, vs different data and/or methods, or both).
       - `validation_status` is the Outcome verdict. Pick it from the evidence,
         not from what would be a nicer result; a contradicted replication is
         publishable and an overclaimed one is not.
+      - `pico_question_type` is PICO-only, deliberately. Step 01 has three
+        alternative anchors and they are not variants of one form: a PCC
+        question has NO type field, and a Quote-with-comment has neither a type
+        nor a label. Call `template_fields` on the anchor you are actually using
+        (01_quote, 01_pico or 01_pcc) rather than assuming they match.
     """
     try:
         return {"ok": True, **_vocabulary(name, live=live)}
@@ -319,6 +326,46 @@ def validate_drafts(directory: str, live: bool = True) -> dict:
     """
     try:
         return {"ok": True, **_validate_drafts(directory, live=live)}
+    except ApiError as e:
+        return _fail(e)
+
+
+@mcp.tool()
+def verify_chain(published_path: str, repo_url: str = "", mode: str = "auto") -> dict:
+    """Verify a published FORRT chain. Run this before announcing it anywhere.
+
+    Point it at a `nanopubs/PUBLISHED.md` ledger (or the directory holding one).
+    Read-only: it never edits, retracts or supersedes — a failing row is for a
+    human to act on. `green` is true only when nothing failed.
+
+    What it checks:
+      - every required step (01-06) has a URI in the ledger;
+      - every URI is really published — present in the constellation, or, for
+        the upstream anchors the walk does not reach, served as RDF by the
+        `w3id.org/np/` resolver;
+      - the Outcome's repository resolves (a Zenodo **version** DOI is the
+        expected value — it pins the archived state, where a GitHub URL would
+        be a moving target);
+      - every DOI the chain cites resolves;
+      - **the CiTO relation agrees with the Outcome's verdict** — Validated
+        implies confirms, PartiallySupported implies qualifies, Contradicted
+        implies disputes. A mismatch means the Outcome and the Citation
+        disagree about what the replication found, which is the failure most
+        worth catching before anyone reads the chain.
+
+    A step reported as "not enumerated by the walk but its TriG resolves" is
+    fine, not a warning: the constellation legitimately stops short of Quote,
+    AIDA and Claim.
+
+    `mode` — `auto` (default), `replication`, `reproduction` or `new_research`.
+    It changes only what is REQUIRED. Research that starts from scratch has no
+    existing work to cite, so no CiTO step and no cited DOI are expected, and
+    `auto` infers that from the absence of a published step 06. Everything else
+    is checked identically in all three. Reproduction and replication verify the
+    same way; pass one explicitly only to make the wording match your study.
+    """
+    try:
+        return {"ok": True, **_verify_chain(published_path, repo_url, mode)}
     except ApiError as e:
         return _fail(e)
 

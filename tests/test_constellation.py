@@ -56,23 +56,23 @@ class TestReplicatedPaper:
     """
 
     def test_prefers_the_cito_over_the_reported_paper_doi(self, raw):
-        paper = C.replicated_paper(raw)
+        paper = C.cited_paper(raw)
         assert paper["doi"] == OLIVER
         assert paper["source"] == "cito-citedTargets"
 
     def test_flags_the_disagreement_rather_than_hiding_it(self, raw):
-        paper = C.replicated_paper(raw)
+        paper = C.cited_paper(raw)
         assert paper["disagreesWithReported"] is True
         assert paper["reportedPaperDoi"] == LIFEWATCH
 
     def test_falls_back_to_paper_doi_when_no_cito_is_reachable(self):
-        paper = C.replicated_paper({"paperDoi": LIFEWATCH, "nodes": [], "chains": []})
+        paper = C.cited_paper({"paperDoi": LIFEWATCH, "nodes": [], "chains": []})
         assert paper["doi"] == LIFEWATCH
         assert paper["source"] == "paperDoi-fallback"
         assert paper["disagreesWithReported"] is False
 
     def test_reports_unknown_when_there_is_nothing_to_go_on(self):
-        assert C.replicated_paper({})["source"] == "unknown"
+        assert C.cited_paper({})["source"] == "unknown"
 
 
 class TestUpstreamAnchors:
@@ -81,7 +81,7 @@ class TestUpstreamAnchors:
         assert sum(1 for n in raw["nodes"] if n["stepKind"] == "quote") == 4
         assert C.summary("x", raw=raw)["upstream"] == []
 
-    def test_quotes_citing_the_replicated_paper_are_kept(self, raw):
+    def test_quotes_citing_the_cited_paper_are_kept(self, raw):
         """Re-attribute the fixture's quotes to Oliver and they must survive."""
         patched = json.loads(json.dumps(raw))
         for node in patched["nodes"]:
@@ -156,4 +156,4 @@ class TestPriorWork:
         assert entry["repository"].startswith("https://doi.org/10.5281/zenodo")
 
     def test_carries_the_corrected_paper_identity(self, raw):
-        assert C.prior_work("x", raw=raw)["replicatedPaper"]["doi"] == OLIVER
+        assert C.prior_work("x", raw=raw)["citedPaper"]["doi"] == OLIVER
