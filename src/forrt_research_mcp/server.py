@@ -191,20 +191,25 @@ def vocabulary(name: str, live: bool = True) -> dict:
     """The allowed values of a FORRT controlled vocabulary, from its template.
 
     Use it whenever a draft needs a claim type, a study type, a validation
-    status, a confidence level, a CiTO relation, or a question type. Every term
-    comes from the real restricted-choice field on the real template (or the
-    value-list nanopub it points at), so a value returned here is one the form
-    will actually accept — and nothing else is.
+    status, a confidence level, or a CiTO relation. Every term comes from the
+    real restricted-choice field on the real template (or the value-list nanopub
+    it points at), so a value returned here is one the form will actually accept
+    — and nothing else is.
 
     Names: claim_type, study_type, validation_status, confidence_level,
-    cito_relation, question_type.
+    cito_relation, pico_question_type.
 
-    Two worth reading before you draft:
+    Three worth reading before you draft:
       - `study_type` carries the Reproduction vs Replication distinction
         (same data + same methods, vs different data and/or methods, or both).
       - `validation_status` is the Outcome verdict. Pick it from the evidence,
         not from what would be a nicer result; a contradicted replication is
         publishable and an overclaimed one is not.
+      - `pico_question_type` is PICO-only, deliberately. Step 01 has three
+        alternative anchors and they are not variants of one form: a PCC
+        question has NO type field, and a Quote-with-comment has neither a type
+        nor a label. Call `template_fields` on the anchor you are actually using
+        (01_quote, 01_pico or 01_pcc) rather than assuming they match.
     """
     try:
         return {"ok": True, **_vocabulary(name, live=live)}

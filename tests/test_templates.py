@@ -90,7 +90,7 @@ class TestVocabularies:
         ("confidence_level", 5),
         ("claim_type", 7),
         ("study_type", 3),
-        ("question_type", 5),
+        ("pico_question_type", 5),
     ])
     def test_inline_enumerations_come_from_the_template(self, name, expected):
         result = T.vocabulary(name, live=False)
@@ -159,3 +159,39 @@ def test_vocabulary_mappings_all_point_at_real_fields():
         spec = T.template_fields(step, live=False)
         ids = [f["id"] for f in spec["fields"]]
         assert field_id in ids, f"{name}: {field_id!r} not in {step} ({ids})"
+
+
+class TestStepOneAnchors:
+    """Step 01 has three alternative anchors, and they are not variants of one
+    form. Treating them as interchangeable is the mistake this guards."""
+
+    def test_all_three_anchors_are_known_steps(self):
+        for anchor in T.ANCHOR_STEPS:
+            assert anchor in T.steps()
+
+    def test_quote_carries_the_character_caps_the_form_enforces(self):
+        """The 500-char quotation cap lives in the template regex, not in prose."""
+        fields = {f["id"]: f for f in T.template_fields("01_quote", live=False)["fields"]}
+        assert fields["quotation"]["regex"] == r"[\s\S]{5,500}"
+        assert fields["comment"]["regex"] == r"[\s\S]{5,800}"
+        assert fields["paper"]["prefix"] == "https://doi.org/"
+
+    def test_pcc_has_no_question_type_field(self):
+        """PICO has `type` with 5 options; PCC has none. A vocabulary named
+        `question_type` would wrongly imply it covers both."""
+        pcc = {f["id"] for f in T.template_fields("01_pcc", live=False)["fields"]}
+        pico = {f["id"] for f in T.template_fields("01_pico", live=False)["fields"]}
+        assert "type" in pico and "type" not in pcc
+        assert T.VOCABULARIES["pico_question_type"] == ("01_pico", "type")
+        assert "question_type" not in T.VOCABULARIES
+
+    def test_the_three_anchors_share_almost_no_fields(self):
+        ids = [{f["id"] for f in T.template_fields(a, live=False)["fields"]}
+               for a in T.ANCHOR_STEPS]
+        assert set.intersection(*ids) == set()
+
+    def test_pcc_and_pico_describe_different_components(self):
+        pcc = {f["id"] for f in T.template_fields("01_pcc", live=False)["fields"]}
+        assert {"conceptDescription", "contextDescription"} <= pcc
+        pico = {f["id"] for f in T.template_fields("01_pico", live=False)["fields"]}
+        assert {"interventionGroupDescription", "comparatorGroupDescription"} <= pico

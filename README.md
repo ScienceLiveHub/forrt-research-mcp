@@ -22,12 +22,30 @@ but it needs nothing from that repo — any agent can call it.
 All three work here, and they use the same chain:
 
 ```
-anchor (Quote-with-comment | PICO / PCC question)
-   → AIDA → Claim → Study → Outcome → CiTO
+anchor → AIDA → Claim → Study → Outcome → CiTO
 ```
 
+**Step 01 is one of three anchors, and they are not variants of one form.**
+Which anchor fits is independent of whether the study is a reproduction, a
+replication or original research:
+
+| Anchor | Required fields | Notes |
+|---|---|---|
+| `01_quote` Quote-with-comment | `paper`, `quotation`, `comment` | no type, no label. `quotation` is capped at 500 characters and `comment` at 800 — in the template's own regex, not in prose |
+| `01_pico` PICO question | `label`, `description`, `type`, + P/I/C/O descriptions | the only anchor with a question-type vocabulary (5 terms) |
+| `01_pcc` PCC question | `label`, `description`, + P/C/C descriptions | **no `type` field at all** |
+
+The three share **no field ids whatsoever**, so call `template_fields` on the
+anchor you are actually using rather than assuming they match. The
+`pico_question_type` vocabulary is named for PICO deliberately: a PCC question
+has no type to look up.
+
+`verify_quote` applies to the Quote anchor only — and that is the one anchor
+with a dedicated tool, because a quotation is the one field whose correctness
+can be *proved* rather than reviewed.
+
 For a study starting from scratch, the Claim is **your own hypothesis**, derived
-from your own question. The FORRT Claim template's `source` is optional, so it
+from your own question or from the work you are building on. The FORRT Claim template's `source` is optional, so it
 needs no external paper — and the Claim-before-Study order then reads as
 **pre-registration**, not as a mismatch. `verify_chain` takes a `mode`
 (`auto` / `replication` / `reproduction` / `new_research`) that changes only what
@@ -339,7 +357,7 @@ pip install -e '.[dev]'
 pytest
 ```
 
-All 162 tests are hermetic and need no network, no API key, and no live
+All 167 tests are hermetic and need no network, no API key, and no live
 service: the constellation fixtures are real recorded `/np/constellation`
 responses, quote tests build minimal PDFs in-process that reproduce the
 extraction artifacts deliberately, and the template/DOI/Wikidata tests stub HTTP
