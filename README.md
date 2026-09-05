@@ -390,7 +390,7 @@ pip install -e '.[dev]'
 pytest
 ```
 
-All 195 tests are hermetic and need no network, no API key, and no live
+All 225 tests are hermetic and need no network, no API key, and no live
 service: the constellation fixtures are real recorded `/np/constellation`
 responses, quote tests build minimal PDFs in-process that reproduce the
 extraction artifacts deliberately, and the template/DOI/Wikidata tests stub HTTP
