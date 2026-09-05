@@ -1,0 +1,98 @@
+{
+  "entry": "https://w3id.org/sciencelive/np/RA9SWUH4evnI3zQfnAmtLyM2CZHDr4Bkg5MKfRSTWErT0",
+  "paperDoi": "",
+  "apexCito": null,
+  "researchSynthesis": null,
+  "chains": [],
+  "nodeCount": 2,
+  "edgeCount": 1,
+  "sparqlEndpoint": "https://query.knowledgepixels.com/repo/full",
+  "nodes": [
+    {
+      "uri": "https://w3id.org/sciencelive/np/RA9SWUH4evnI3zQfnAmtLyM2CZHDr4Bkg5MKfRSTWErT0",
+      "stepKind": "aida",
+      "stepType": "Expressing a statement about research as an AIDA sentence",
+      "templateUri": "https://w3id.org/np/RALmXhDw3rHcMveTgbv8VtWxijUHwnSqhCmtJFIPKWVaA",
+      "label": "AIDA sentence: Computing the angular power spectrum of satellite imagery on an equal-area HEALPix grid removes the latitude-dependent area bias that a regular longitude/latitude grid introduces.",
+      "date": "2026-06-28T15:33:30.173Z",
+      "creators": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "creatorNames": [
+        "Anne Fouilloux"
+      ],
+      "authorsOrcid": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "plainTextExcerpts": [
+        "AIDA sentence: Computing the angular power spectrum of satellite imagery on an equal-area HEALPix grid removes the latitude-dependent area bias that a regular longitude/latitude grid introduces.",
+        "Anne Fouilloux"
+      ],
+      "githubUrls": [],
+      "aida": {
+        "sentence": "Computing the angular power spectrum of satellite imagery on an equal-area HEALPix grid removes the latitude-dependent area bias that a regular longitude/latitude grid introduces."
+      }
+    },
+    {
+      "uri": "https://w3id.org/sciencelive/np/RA3YO8FF5CbILzJU7-Gxf5C6VRxpkQDlA0cuEnVKtQziQ",
+      "stepKind": "question",
+      "stepType": "Defining a PICO-based research question",
+      "templateUri": "https://w3id.org/np/RA5e5XeXy_-aNK5giB7kBAEQslTLVydHeM4YYEzhmEE2w",
+      "label": "Does equal-area HEALPix gridding remove latitude bias from the power spectrum of satellite imagery?",
+      "date": "2026-06-28T15:28:38.008Z",
+      "creators": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "creatorNames": [
+        "Anne Fouilloux"
+      ],
+      "authorsOrcid": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "plainTextExcerpts": [
+        "For Earth-observation satellite imagery, does computing the angular power spectrum on an equal-area HEALPix grid, compared with a regular geographic lon/lat grid, remove the latitude-dependent area bias in the spectral amplitude?",
+        "Angular power spectrum analysis performed on an equal-area HEALPix tessellation of the sphere defined on the WGS84 ellipsoid.",
+        "The same analysis on a regular geographic latitude/longitude grid, whose cells shrink in surface area towards the poles.",
+        "Presence or absence of a latitude-dependent bias in the spectral amplitude / power as a function of spatial scale."
+      ],
+      "githubUrls": [],
+      "question": {
+        "framework": "PICO",
+        "label": "Does equal-area HEALPix gridding remove latitude bias from the power spectrum of satellite imagery?",
+        "question": "For Earth-observation satellite imagery, does computing the angular power spectrum on an equal-area HEALPix grid, compared with a regular geographic lon/lat grid, remove the latitude-dependent area bias in the spectral amplitude?",
+        "components": [
+          {
+            "key": "population",
+            "label": "Population",
+            "text": "Earth-observation optical satellite imagery (multispectral surface-reflectance scenes) at regional scale."
+          },
+          {
+            "key": "intervention",
+            "label": "Intervention",
+            "text": "Angular power spectrum analysis performed on an equal-area HEALPix tessellation of the sphere defined on the WGS84 ellipsoid."
+          },
+          {
+            "key": "comparator",
+            "label": "Comparator",
+            "text": "The same analysis on a regular geographic latitude/longitude grid, whose cells shrink in surface area towards the poles."
+          },
+          {
+            "key": "outcome",
+            "label": "Outcome",
+            "text": "Presence or absence of a latitude-dependent bias in the spectral amplitude / power as a function of spatial scale."
+          }
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "https://w3id.org/sciencelive/np/RA9SWUH4evnI3zQfnAmtLyM2CZHDr4Bkg5MKfRSTWErT0",
+      "target": "https://w3id.org/sciencelive/np/RA3YO8FF5CbILzJU7-Gxf5C6VRxpkQDlA0cuEnVKtQziQ",
+      "relation": "refersTo"
+    }
+  ],
+  "externalCitations": [
+    "https://doi.org/10.1086/427976"
+  ]
+}

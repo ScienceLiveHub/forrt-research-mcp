@@ -208,42 +208,99 @@ def _check_verdict_relation(view: dict, apex_relations: list[str]) -> list[dict]
     return out
 
 
-def _check_cited_dois(view: dict, mode: str) -> list[dict]:
+def _check_cited_targets(view: dict, mode: str) -> list[dict]:
+    """Everything the chain cites must exist.
+
+    A CiTO target is not always a DOI. A chain may credit a software repository
+    by URL — both of this project's question-rooted chains do, one citing
+    `github.com/GRID4EARTH/healpix-analyse` — so treating every target as a DOI
+    reports a correctly published chain as broken.
+    """
     paper = view["citedPaper"]
     targets = paper.get("allCitedTargets") or ([paper["doi"]] if paper["doi"] else [])
     if not targets:
         if mode == "new_research":
-            return [_row("info", "cited-doi",
-                         "the chain cites no DOI, which is expected for research "
+            return [_row("info", "cited-target",
+                         "the chain cites nothing, which is expected for research "
                          "that does not start from an existing work")]
-        return [_row("fail", "cited-doi",
-                     f"the chain cites no DOI — nothing identifies the work this "
+        return [_row("fail", "cited-target",
+                     f"the chain cites nothing — nothing identifies the work this "
                      f"{mode} is of. If this study started from scratch, pass "
                      f"mode='new_research'")]
 
     out: list[dict] = []
     for target in targets:
-        try:
-            result = resolve_doi(target)
-        except GroundingError as e:
-            out.append(_row("fail", "cited-doi", f"{target} is malformed: {e}",
-                            doi=target))
-            continue
-        if result["resolves"]:
-            out.append(_row("pass", "cited-doi",
-                            f"{result['doi']} resolves — {result['title'][:60]}",
-                            doi=result["doi"], title=result["title"]))
-        elif result["status"] == 404:
-            out.append(_row("fail", "cited-doi",
-                            f"{result['doi']} IS NOT REGISTERED — the published "
-                            f"chain cites a DOI that does not exist",
-                            doi=result["doi"]))
+        if _looks_like_doi(target):
+            out.append(_check_cited_doi(target))
         else:
-            out.append(_row("warn", "cited-doi",
-                            f"{result['doi']} could not be confirmed (HTTP "
-                            f"{result['status']}); may be transient",
-                            doi=result["doi"]))
+            out.append(_check_cited_url(target))
     return out
+
+
+def _looks_like_doi(target: str) -> bool:
+    t = (target or "").strip()
+    return t.startswith("10.") or "doi.org/" in t
+
+
+def _check_cited_doi(target: str) -> dict:
+    try:
+        result = resolve_doi(target)
+    except GroundingError as e:
+        return _row("fail", "cited-target", f"{target} is a malformed DOI: {e}",
+                    target=target)
+    if result["resolves"]:
+        return _row("pass", "cited-target",
+                    f"{result['doi']} resolves — {result['title'][:60]}",
+                    target=result["doi"], title=result["title"])
+    if result["status"] == 404:
+        return _row("fail", "cited-target",
+                    f"{result['doi']} IS NOT REGISTERED — the published chain "
+                    f"cites a DOI that does not exist", target=result["doi"])
+    return _row("warn", "cited-target",
+                f"{result['doi']} could not be confirmed (HTTP {result['status']}); "
+                f"may be transient", target=result["doi"])
+
+
+def _check_cited_url(target: str) -> dict:
+    """A non-DOI citation target — typically a software repository."""
+    if not target.startswith(("http://", "https://")):
+        return _row("fail", "cited-target",
+                    f"{target!r} is neither a DOI nor a URL — nothing resolves it",
+                    target=target)
+    try:
+        fetch_url_ok = _url_reachable(target)
+    except ApiError as e:
+        return _row("warn", "cited-target",
+                    f"{target} could not be reached ({e}); may be transient",
+                    target=target)
+    if fetch_url_ok:
+        return _row("pass", "cited-target",
+                    f"{target} resolves (a non-DOI target, typically a software "
+                    f"repository)", target=target)
+    return _row("fail", "cited-target",
+                f"{target} does not resolve — the published chain cites a URL "
+                f"that is not there", target=target)
+
+
+def _url_reachable(url: str, *, timeout: int = 30) -> bool:
+    import urllib.error
+    import urllib.request
+
+    from .api import USER_AGENT
+
+    request = urllib.request.Request(url, method="HEAD",
+                                     headers={"User-Agent": USER_AGENT})
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return 200 <= response.status < 400
+    except urllib.error.HTTPError as e:
+        if e.code == 405:  # HEAD not allowed; the resource still exists
+            return True
+        if e.code == 404:
+            return False
+        raise ApiError(f"HTTP {e.code}") from e
+    except (urllib.error.URLError, TimeoutError) as e:
+        raise ApiError(str(e)) from e
 
 
 def _resolve_mode(mode: str, published: dict) -> str:
@@ -313,7 +370,7 @@ def verify_chain(published_path: str, repo_url: str = "", mode: str = "auto") ->
     rows += _check_repository(view, published, repo_url)
     apex_relations = (view["apexCito"] or {}).get("relations", [])
     rows += _check_verdict_relation(view, apex_relations)
-    rows += _check_cited_dois(view, resolved_mode)
+    rows += _check_cited_targets(view, resolved_mode)
 
     counts = {s: sum(1 for r in rows if r["status"] == s)
               for s in ("pass", "fail", "warn", "skip", "info")}

@@ -111,3 +111,53 @@ class TestNoCitedPaper:
         prior = C.prior_work("x", raw=raw)
         assert prior["replicationCount"] == 0 and prior["verdicts"] == []
         assert len(prior["upstreamAnchors"]) == 1
+
+
+class TestEntryDepth:
+    """The walk crosses Claim -> AIDA (the platform bridges the shared
+    purl.org/aida/ statement IRI) but NOT AIDA -> Claim, which is not a nanopub
+    reference and so has no npa:refersToNanopub edge to follow upstream.
+
+    Consequence: entering at an anchor or an AIDA finds no chain even when a
+    complete six-step chain is published on it. Both fixtures below are the SAME
+    published chain, entered at different depths."""
+
+    @pytest.fixture(params=["pico", "pcc"])
+    def at_aida(self, request):
+        return json.loads((FIXTURES / f"question-{request.param}-aida-entry.json").read_text())
+
+    @pytest.fixture(params=["pico", "pcc"])
+    def full(self, request):
+        return json.loads((FIXTURES / f"question-{request.param}-full-chain.json").read_text())
+
+    def test_entering_at_the_aida_reaches_only_the_anchor(self, at_aida):
+        assert at_aida["nodeCount"] == 2
+        assert not at_aida["chains"]
+
+    def test_a_shallow_entry_says_so_instead_of_implying_no_chain_exists(self, at_aida):
+        view = C.summary("x", raw=at_aida)
+        assert "entryTooShallow" in view
+        assert "Re-enter at the Claim or deeper" in view["entryTooShallow"]
+
+    def test_entering_at_the_claim_reaches_the_whole_chain(self, full):
+        view = C.summary("x", raw=full)
+        assert len(view["chains"]) == 1
+        assert view["chains"][0]["stepsPresent"] == [
+            "Question", "AIDA", "Claim", "Study", "Outcome", "CiTO"]
+        assert "entryTooShallow" not in view
+
+    def test_a_complete_chain_carries_its_question_anchor_as_a_step(self, full):
+        """The Question is enumerated as a chain step here, not merely as an
+        upstream anchor — a question-rooted chain is complete in itself."""
+        question = next(s for s in C.summary("x", raw=full)["chains"][0]["steps"]
+                        if s["step"] == "Question")
+        assert question["framework"] in ("PICO", "PCC")
+        assert question["components"] and question["text"]
+
+    def test_these_are_from_scratch_chains_crediting_their_tools(self, full):
+        """Both credit the software they used rather than confirming a prior
+        finding — `credits` asserts no verdict, so the verdict cross-check must
+        not fire."""
+        chain = C.summary("x", raw=full)["chains"][0]
+        assert chain["verdict"] == "Validated"
+        assert chain["citoRelations"] == ["credits"]

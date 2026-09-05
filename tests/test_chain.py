@@ -193,7 +193,7 @@ class TestVerdictAgreesWithCitation:
 class TestCitedDois:
     def test_a_resolving_cited_doi_passes(self, tmp_path):
         rows = C.verify_chain(write(tmp_path, ledger()))["rows"]
-        assert [r for r in rows if r["check"] == "cited-doi"][0]["status"] == "pass"
+        assert [r for r in rows if r["check"] == "cited-target"][0]["status"] == "pass"
 
     def test_an_unregistered_cited_doi_fails(self, tmp_path, monkeypatch):
         monkeypatch.setattr(C, "resolve_doi", lambda doi: {
@@ -297,3 +297,52 @@ class TestModes:
     def test_an_unknown_mode_lists_the_real_ones(self, tmp_path):
         with pytest.raises(ApiError, match="expected one of"):
             C.verify_chain(write(tmp_path, ledger()), mode="primary")
+
+
+class TestNonDoiCitationTargets:
+    """A CiTO may cite a software repository by URL, not only a DOI. Treating
+    every target as a DOI reported a correctly published chain as broken — one
+    of this project's real question-rooted chains credits
+    github.com/GRID4EARTH/healpix-analyse."""
+
+    def test_a_reachable_repository_url_passes(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(C, "_summary", lambda uri, **kw: {
+            **view(), "citedPaper": {
+                "doi": "https://github.com/GRID4EARTH/healpix-analyse",
+                "allCitedTargets": ["https://github.com/GRID4EARTH/healpix-analyse"],
+                "source": "cito-citedTargets"}})
+        monkeypatch.setattr(C, "_url_reachable", lambda url, **kw: True)
+        result = C.verify_chain(write(tmp_path, ledger()))
+        assert result["green"] is True
+        row = [r for r in result["rows"] if r["check"] == "cited-target"][0]
+        assert row["status"] == "pass" and "non-DOI target" in row["message"]
+
+    def test_a_dead_repository_url_fails(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(C, "_summary", lambda uri, **kw: {
+            **view(), "citedPaper": {
+                "doi": "https://github.com/nope/gone",
+                "allCitedTargets": ["https://github.com/nope/gone"],
+                "source": "cito-citedTargets"}})
+        monkeypatch.setattr(C, "_url_reachable", lambda url, **kw: False)
+        assert C.verify_chain(write(tmp_path, ledger()))["green"] is False
+
+    def test_an_unreachable_host_warns_rather_than_failing(self, tmp_path, monkeypatch):
+        def boom(url, **kw):
+            raise ApiError("connection refused")
+        monkeypatch.setattr(C, "_summary", lambda uri, **kw: {
+            **view(), "citedPaper": {
+                "doi": "https://example.invalid/x",
+                "allCitedTargets": ["https://example.invalid/x"],
+                "source": "cito-citedTargets"}})
+        monkeypatch.setattr(C, "_url_reachable", boom)
+        result = C.verify_chain(write(tmp_path, ledger()))
+        assert result["green"] is True
+        assert any(r["check"] == "cited-target" and r["status"] == "warn"
+                   for r in result["rows"])
+
+    def test_a_target_that_is_neither_doi_nor_url_fails(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(C, "_summary", lambda uri, **kw: {
+            **view(), "citedPaper": {
+                "doi": "some-free-text", "allCitedTargets": ["some-free-text"],
+                "source": "cito-citedTargets"}})
+        assert C.verify_chain(write(tmp_path, ledger()))["green"] is False

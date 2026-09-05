@@ -205,6 +205,35 @@ def _upstream_nodes(raw: dict, paper_doi: str) -> list[dict]:
     return out
 
 
+def _shallow_entry_hint(raw: dict, chains: list[dict]) -> str:
+    """Warn when the entry URI is too shallow to reach its own chain.
+
+    The walk crosses Claim -> AIDA (the platform bridges the shared
+    `purl.org/aida/` statement IRI) but NOT AIDA -> Claim: that link is not a
+    nanopub reference, so it has no `npa:refersToNanopub` edge to follow
+    upstream. Entering at a Question or an AIDA therefore returns only the
+    anchor and stops, even when a complete six-step chain is published on it.
+
+    Verified 2026-09-05 on two real question-rooted chains: entering at the
+    Question gave 1 node, at the AIDA 2 nodes, at the Claim all 7 with every
+    step enumerated.
+    """
+    if chains:
+        return ""
+    entry = (raw.get("entry") or "").strip()
+    kinds = {n.get("uri"): n.get("stepKind") for n in raw.get("nodes") or []}
+    entry_kind = kinds.get(entry) or next(iter(kinds.values()), "")
+    if entry_kind not in ("question", "quote", "aida"):
+        return ""
+    return (
+        f"No chain was reachable, but the entry is a {entry_kind!r} node — the "
+        f"walk cannot follow AIDA -> Claim upstream, because that link is a "
+        f"shared purl.org/aida/ statement IRI rather than a nanopub reference. "
+        f"A complete chain may still be published on this anchor. Re-enter at "
+        f"the Claim or deeper (Outcome, CiTO, Synthesis) to see it."
+    )
+
+
 def summary(uri: str, *, depth: int = 5, max_nodes: int = 80,
             base: str | None = None, key: str | None = None,
             raw: dict | None = None) -> dict:
@@ -248,6 +277,7 @@ def summary(uri: str, *, depth: int = 5, max_nodes: int = 80,
     apex = data.get("apexCito") or None
     synthesis = data.get("researchSynthesis") or None
     paper = cited_paper(data)
+    entry_hint = _shallow_entry_hint(data, chains)
 
     return {
         "entry": data.get("entry") or uri,
@@ -264,6 +294,7 @@ def summary(uri: str, *, depth: int = 5, max_nodes: int = 80,
             "label": synthesis.get("label", ""),
         } if synthesis else None,
         "externalCitations": data.get("externalCitations") or [],
+        **({"entryTooShallow": entry_hint} if entry_hint else {}),
         # Kept so a caller can see how much was dropped, without carrying it.
         "neighbourhood": {
             "nodeCount": data.get("nodeCount", 0),
