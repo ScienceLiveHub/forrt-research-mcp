@@ -347,6 +347,12 @@ forms. A 5xx is reported as transient rather than as a bad DOI.
 Real Wikidata candidates for a term, with their actual P31/P279 types. Pass
 `expected_type` as a QID and each candidate is marked `typeMatches`.
 
+Checked against the ten Wikidata terms in this project's published chains — the
+QIDs `build_chain_draft.py` resolved and signed — it returns the published QID
+at rank 1 for all ten (marine heatwave, sea surface temperature, climate change,
+time series analysis, chlorophyll a, remote sensing, estuary, Sentinel-2, water
+quality, atmospheric correction).
+
 It deliberately **does not choose** — picking the right sense of an ambiguous
 label is a judgement. Searching `Bombus` with `Q16521` (taxon) returns the
 insect genus as a match and *the album of the same name* as not, which is
@@ -397,7 +403,7 @@ pip install -e '.[dev]'
 pytest
 ```
 
-All 260 tests are hermetic and need no network, no API key, and no live
+All 263 tests are hermetic and need no network, no API key, and no live
 service: the constellation fixtures are real recorded `/np/constellation`
 responses, quote tests build minimal PDFs in-process that reproduce the
 extraction artifacts deliberately, and the template/DOI/Wikidata tests stub HTTP

@@ -151,3 +151,57 @@ class TestWikidataLookup:
         note = wikidata_lookup("Bombus", expected_type="Q16521")["note"]
         assert "candidates only" in note
         assert "none is asserted" in note
+
+
+class TestAgainstRealPublishedTerms:
+    """The Wikidata terms in this project's published chains.
+
+    `build_chain_draft.py` resolves the plain labels a drafter writes into
+    `{uri, label}` pairs, and those QIDs are what got signed. So the check that
+    matters is not "does the tool return something" but "does it return the same
+    QID the published chain used". Live, all ten agree at rank 1:
+
+        marine heatwave Q56321065 · sea surface temperature Q1507383
+        climate change Q125928   · time series analysis Q11850042
+        chlorophyll a Q133878    · remote sensing Q199687
+        estuary Q47053           · Sentinel-2 Q4302480
+        water quality Q625376    · atmospheric correction Q4817104
+
+    The fixture below is the real API response for the first of them, trimmed to
+    the fields the code reads, so the extraction is pinned against a genuine
+    Wikidata payload shape rather than a hand-written one.
+    """
+
+    @pytest.fixture
+    def real_response(self, monkeypatch):
+        import json
+        from pathlib import Path
+        data = json.loads(
+            (Path(__file__).parent / "fixtures" / "wikidata-marine-heatwave.json").read_text())
+
+        def fake(params):
+            if params["action"] == "wbsearchentities":
+                return data["search"]
+            if params.get("props") == "claims":
+                return data["claims"]
+            ids = params["ids"].split("|")
+            return {"entities": {q: {"labels": {"en": {"value": f"label-{q}"}}}} for q in ids}
+
+        monkeypatch.setattr(G, "_wikidata_api", fake)
+
+    def test_the_published_qid_comes_back_first(self, real_response):
+        result = wikidata_lookup("marine heatwave", limit=5)
+        assert result["candidates"][0]["qid"] == "Q56321065"
+        assert result["candidates"][0]["label"] == "marine heatwave"
+        assert "anomalously warm water" in result["candidates"][0]["description"]
+
+    def test_its_real_type_statements_are_extracted(self, real_response):
+        top = wikidata_lookup("marine heatwave", limit=5)["candidates"][0]
+        assert [t["qid"] for t in top["types"]] == ["Q215864"]
+
+    def test_type_checking_works_against_the_real_payload(self, real_response):
+        """Q215864 is the class it is actually a subclass of; anything else is not."""
+        assert wikidata_lookup("marine heatwave", expected_type="Q215864",
+                               limit=5)["candidates"][0]["typeMatches"] is True
+        assert wikidata_lookup("marine heatwave", expected_type="Q16521",
+                               limit=5)["candidates"][0]["typeMatches"] is False
