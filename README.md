@@ -396,6 +396,27 @@ unrelated studies):
    a status-only reachability check passes even when no nanopub is served. We
    normalise to the bare `w3id.org/np/` resolver and assert the body is RDF.
 
+## Checking against every real artefact
+
+The test suite is hermetic: it pins behaviour against recorded data, which
+prevents regressions but **cannot discover a wrong premise**. Every serious bug
+in this server was a wrong premise, and each surfaced only when the tools met
+real data they had not seen. So "have we tested comprehensively?" is not a
+judgement call here — it is a computation with a visible denominator:
+
+```bash
+python scripts/check_corpus.py /path/to/your/study/repos
+```
+
+It discovers every repository with a `nanopubs/` directory, runs the applicable
+tools against each artefact, and prints what passed out of what was found.
+Findings are *not* automatically failures — an empty required field is a true
+statement about a draft. What it exits non-zero for is a **crash or a parse
+failure**, because those mean a tool could not read a real artefact at all.
+
+The denominator is only as good as what is on disk. A chain that is not under
+that root is not covered, and a green run does not say otherwise.
+
 ## Development
 
 ```bash
@@ -403,7 +424,7 @@ pip install -e '.[dev]'
 pytest
 ```
 
-All 263 tests are hermetic and need no network, no API key, and no live
+All 268 tests are hermetic and need no network, no API key, and no live
 service: the constellation fixtures are real recorded `/np/constellation`
 responses, quote tests build minimal PDFs in-process that reproduce the
 extraction artifacts deliberately, and the template/DOI/Wikidata tests stub HTTP

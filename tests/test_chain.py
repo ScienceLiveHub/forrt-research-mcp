@@ -346,3 +346,49 @@ class TestNonDoiCitationTargets:
                 "doi": "some-free-text", "allCitedTargets": ["some-free-text"],
                 "source": "cito-citedTargets"}})
         assert C.verify_chain(write(tmp_path, ledger()))["green"] is False
+
+
+class TestLedgerLayoutVariance:
+    """Ledgers vary. `pangeo-fish-replication` lists step 07 in the numbered
+    table and the rest in a second table keyed by description ("PCC question:
+    …", "FORRT Replication Study: …"). A step-number parser sees one row and
+    would report five steps missing — a false verdict about a chain that IS
+    published."""
+
+    def stray_ledger(self) -> str:
+        return (f"| 07 | Research Software | {STUDY} | 2026-06-05 |\n\n"
+                "## Individual nanopublications\n\n"
+                f"| PCC question | `{QUOTE}` |\n"
+                f"| FORRT Replication Study | `{CLAIM}` |\n"
+                f"| FORRT Replication Outcome | `{OUTCOME}` |\n")
+
+    def test_uris_outside_the_step_table_are_counted(self):
+        text = self.stray_ledger()
+        parsed = C.parse_published(text)
+        assert list(parsed) == ["07"]
+        assert len(C.unparsed_uris(text, parsed)) == 3
+
+    def test_a_uri_already_claimed_is_not_double_counted(self):
+        text = ledger()
+        assert C.unparsed_uris(text, C.parse_published(text)) == []
+
+    def test_the_two_uri_forms_are_reconciled(self):
+        """The same nanopub written both ways must not look like two."""
+        text = f"| 05 | Outcome | {OUTCOME} | 2026 |\n\nAlso: {OUTCOME.replace('/sciencelive/np/', '/np/')}\n"
+        assert C.unparsed_uris(text, C.parse_published(text)) == []
+
+    def test_the_report_says_it_cannot_read_the_layout(self, tmp_path):
+        result = C.verify_chain(write(tmp_path, self.stray_ledger()))
+        ledger_rows = [r for r in result["rows"] if r["check"] == "ledger"
+                       and r["status"] == "fail"]
+        assert len(ledger_rows) == 1, "one layout complaint, not one per step"
+        assert "cannot map to step numbers" in ledger_rows[0]["message"]
+        assert ledger_rows[0]["unparsedUris"]
+
+    def test_a_genuinely_incomplete_ledger_still_names_its_steps(self, tmp_path):
+        """No stray URIs means the steps really are missing, and the report
+        should say which."""
+        text = ledger().replace(f"| 03 | Template name | {CLAIM} | 2026-08-15 |\n", "")
+        result = C.verify_chain(write(tmp_path, text))
+        assert any(r["check"] == "ledger" and r.get("step") == "03"
+                   for r in result["rows"])

@@ -30,6 +30,7 @@ from .grounding import GroundingError, resolve_doi
 _ROW_RE = re.compile(
     r"^\|\s*(\d{2})\s*\|([^|]*)\|\s*(\S+)\s*\|", re.M)
 _URI_RE = re.compile(r"^https://w3id\.org/(?:sciencelive/)?np/RA[A-Za-z0-9_-]{20,}$")
+_ANY_URI_RE = re.compile(r"https://w3id\.org/(?:sciencelive/)?np/RA[A-Za-z0-9_-]{20,}")
 
 STEP_NAMES = {
     "01": "Quote / PICO / PCC", "02": "AIDA Sentence", "03": "FORRT Claim",
@@ -71,6 +72,25 @@ def parse_published(text: str) -> dict[str, str]:
         if _URI_RE.match(uri):
             found[step] = uri
     return found
+
+
+def unparsed_uris(text: str, parsed: dict[str, str]) -> list[str]:
+    """Nanopub URIs in the ledger that the step table did not account for.
+
+    Ledgers vary. `pangeo-fish-replication` lists step 07 in the numbered table
+    and the rest in a second table keyed by description ("PCC question: …",
+    "FORRT Replication Study: …"), so a step-number parser sees one row and
+    would report the chain as incomplete — a false failure about a chain that is
+    published. Counting the URIs the parser did NOT claim turns that from a
+    wrong verdict into an explicit "this ledger uses a layout I cannot read".
+    """
+    claimed = {canonical_uri(u) for u in parsed.values()}
+    seen: list[str] = []
+    for match in _ANY_URI_RE.finditer(text):
+        uri = match.group(0)
+        if canonical_uri(uri) not in claimed and uri not in seen:
+            seen.append(uri)
+    return seen
 
 
 def _entry_uri(published: dict[str, str]) -> str:
@@ -345,10 +365,25 @@ def verify_chain(published_path: str, repo_url: str = "", mode: str = "auto") ->
                 else REQUIRED_STEPS)
 
     rows: list[dict] = []
-    for step in [s for s in required if s not in published]:
-        rows.append(_row("fail", "ledger",
-                         f"step {step} ({STEP_NAMES[step]}) has no URI — the "
-                         f"chain is incomplete", step=step))
+
+    # Ledger layouts vary. If the file holds URIs the step table did not
+    # account for, the steps are not missing — this parser cannot read them,
+    # and saying "incomplete" would be a false verdict about a real chain.
+    stray = unparsed_uris(path.read_text(), published)
+    missing = [s for s in required if s not in published]
+    if stray and missing:
+        rows.append(_row(
+            "fail", "ledger",
+            f"{len(stray)} nanopub URI(s) in this ledger are outside the "
+            f"`| NN | … |` step table, so {len(missing)} step(s) look missing "
+            f"that may well be published. This ledger uses a layout this tool "
+            f"cannot map to step numbers — check it by hand",
+            unparsedUris=stray, apparentlyMissing=missing))
+    else:
+        for step in missing:
+            rows.append(_row("fail", "ledger",
+                             f"step {step} ({STEP_NAMES[step]}) has no URI — the "
+                             f"chain is incomplete", step=step))
     if resolved_mode == "new_research" and "06" not in published:
         rows.append(_row("info", "ledger",
                          "no CiTO step, which is expected for research that does "
