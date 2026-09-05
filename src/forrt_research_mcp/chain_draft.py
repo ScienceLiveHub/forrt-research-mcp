@@ -31,7 +31,7 @@ from pathlib import Path
 
 from .api import ApiError
 from .grounding import GroundingError, resolve_doi
-from .templates import VOCABULARIES, registry, template_fields, vocabulary
+from .templates import VOCABULARIES, matches_term, registry, template_fields, vocabulary
 
 SCHEMA_KIND = "forrt-chain-draft"
 KNOWN_SCHEMA_VERSIONS = ("1.0",)
@@ -248,9 +248,7 @@ def _check_value(step: str, key: str, value, field: dict, *, live: bool) -> list
                   if s == step and f == key), None)
     if vocab:
         allowed = vocabulary(vocab, live=live).get("values") or []
-        if allowed and not any(value == a["uri"] or value.lower() in (a["label"] or "").lower()
-                               or (a["label"] or "").lower().startswith(value.lower())
-                               for a in allowed):
+        if allowed and not any(matches_term(value, a) for a in allowed):
             out.append(_finding("error", "vocabulary",
                                 f"{step}.{key} = {value!r} is not one of the "
                                 f"{len(allowed)} values this field accepts",
