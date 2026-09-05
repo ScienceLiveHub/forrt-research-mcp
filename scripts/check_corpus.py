@@ -46,21 +46,37 @@ from forrt_research_mcp.templates import steps, template_fields  # noqa: E402
 
 
 class Tally:
-    """Counts with a visible denominator, and tool failures kept separate."""
+    """Counts with a visible denominator, and tool failures kept separate.
+
+    The denominator counts only artefacts that EXIST to be checked. A repo with
+    an empty ledger has no chain, so counting it as an unclean chain would say
+    something false — a first version printed "3/12 clean" for 4 published
+    chains of which 3 were green, which reads as nine broken chains. Skipped
+    rows are reported beside the count, never inside it, and detail lines hang
+    off their row rather than becoming rows of their own.
+    """
 
     def __init__(self) -> None:
-        self.rows: list[tuple[str, str, str, str]] = []
+        self.rows: list[dict] = []
         self.tool_failures: list[str] = []
 
-    def add(self, artefact: str, where: str, status: str, detail: str = "") -> None:
-        self.rows.append((artefact, where, status, detail))
+    def add(self, artefact: str, where: str, status: str, detail: str = "",
+            notes: list[str] | None = None) -> None:
+        self.rows.append({"artefact": artefact, "where": where, "status": status,
+                          "detail": detail, "notes": notes or []})
 
     def fail(self, what: str) -> None:
         self.tool_failures.append(what)
 
-    def counts(self, artefact: str) -> tuple[int, int]:
-        rows = [r for r in self.rows if r[0] == artefact]
-        return sum(1 for r in rows if r[2] == "ok"), len(rows)
+    def of(self, artefact: str) -> list[dict]:
+        return [r for r in self.rows if r["artefact"] == artefact]
+
+    def counts(self, artefact: str) -> tuple[int, int, int]:
+        """(clean, checkable, skipped) — skipped is NOT in the denominator."""
+        rows = self.of(artefact)
+        skipped = sum(1 for r in rows if r["status"] == "skip")
+        checkable = [r for r in rows if r["status"] != "skip"]
+        return sum(1 for r in checkable if r["status"] == "ok"), len(checkable), skipped
 
 
 def discover(root: Path) -> list[Path]:
@@ -88,13 +104,10 @@ def check_chain(repo: Path, tally: Tally) -> None:
         tally.fail(f"verify_chain({repo.name}) crashed: {e}\n{traceback.format_exc()}")
         return
 
-    status = "ok" if result["green"] else "finding"
-    detail = f"mode={result['mode']} {result['counts']}"
-    tally.add("chains", repo.name, status, detail)
-    if not result["green"]:
-        for row in result["rows"]:
-            if row["status"] == "fail":
-                tally.add("chains", f"  {repo.name}", "finding", row["message"][:66])
+    notes = [r["message"] for r in result["rows"] if r["status"] == "fail"]
+    tally.add("chains", repo.name, "ok" if result["green"] else "finding",
+              f"mode={result['mode']}, {result['counts']['pass']} pass / "
+              f"{result['counts']['fail']} fail", notes)
 
 
 def check_drafts(repo: Path, tally: Tally, *, live: bool) -> None:
@@ -175,17 +188,26 @@ def main(argv: list[str] | None = None) -> int:
             check_chain(repo, tally)
     check_templates(tally, live=live)
 
-    width = max(len(r[1]) for r in tally.rows) if tally.rows else 20
+    width = max((len(r["where"]) for r in tally.rows), default=20)
+    NOT_APPLICABLE = {"chains": "have nothing published",
+                      "drafts": "have no recognisable drafts"}
     for artefact in ("chains", "chain-drafts", "drafts", "templates"):
-        rows = [r for r in tally.rows if r[0] == artefact]
+        rows = tally.of(artefact)
         if not rows:
             continue
-        ok, total = tally.counts(artefact)
-        print(f"{artefact}  —  {ok}/{total} clean")
-        for _, where, status, detail in rows:
-            mark = {"ok": "  ok  ", "finding": " find ", "skip": " skip "}.get(
-                status, f" {status[:5]:5}")
-            print(f"  {mark} {where:<{width}}  {detail}")
+        ok, checkable, skipped = tally.counts(artefact)
+        headline = f"{artefact}  —  {ok}/{checkable} clean"
+        if skipped:
+            headline += (f"   ({skipped} of {len(rows)} repos "
+                         f"{NOT_APPLICABLE.get(artefact, 'not applicable')}, "
+                         f"so not counted)")
+        print(headline)
+        for row in rows:
+            mark = {"ok": "  ok  ", "finding": " find ", "skip": " n/a  "}.get(
+                row["status"], f" {row['status'][:5]:5}")
+            print(f"  {mark} {row['where']:<{width}}  {row['detail']}")
+            for note in row["notes"]:
+                print(f"         {'':<{width}}  - {note[:96]}")
         print()
 
     if tally.tool_failures:
