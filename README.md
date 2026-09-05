@@ -44,6 +44,13 @@ has no type to look up.
 with a dedicated tool, because a quotation is the one field whose correctness
 can be *proved* rather than reviewed.
 
+`constellation` and `prior_work` surface a question anchor with its `framework`,
+`label`, full question text and its framework's `components` — PICO's
+population / intervention / comparator / outcome, PCC's population / concept /
+context. Question nodes keep all of that in a `question` object and leave their
+top-level `label` empty, so anything reading them like a quote returns nothing.
+Tested against two real published question nanopubs.
+
 For a study starting from scratch, the Claim is **your own hypothesis**, derived
 from your own question or from the work you are building on. The FORRT Claim
 template's `source` is optional, so it needs no external paper — and the
@@ -390,7 +397,7 @@ pip install -e '.[dev]'
 pytest
 ```
 
-All 225 tests are hermetic and need no network, no API key, and no live
+All 240 tests are hermetic and need no network, no API key, and no live
 service: the constellation fixtures are real recorded `/np/constellation`
 responses, quote tests build minimal PDFs in-process that reproduce the
 extraction artifacts deliberately, and the template/DOI/Wikidata tests stub HTTP

@@ -133,18 +133,56 @@ def cited_paper(raw: dict) -> dict:
     }
 
 
+def _question_anchor(node: dict) -> dict:
+    """A PICO or PCC question anchor.
+
+    Question nodes carry their content in a `question` object — `framework`,
+    `label`, the question text, and the framework's components — not in the
+    `quote` fields, and their top-level `label` is empty. Reading them like a
+    quote returns nothing at all, which is what a first version did.
+    """
+    q = node.get("question") or {}
+    components = [
+        {"key": c.get("key", ""), "label": c.get("label", ""), "text": c.get("text", "")}
+        for c in (q.get("components") or [])
+    ]
+    return {
+        "step": "Question",
+        "uri": node["uri"],
+        "framework": q.get("framework", ""),
+        "label": q.get("label", ""),
+        "text": q.get("question", ""),
+        "text_source": "structured" if q.get("question") else "missing",
+        "components": components,
+        "comment": "",
+        "citedDoi": "",
+        "date": node.get("date") or "",
+        "creators": node.get("creatorNames") or [],
+        "authorsOrcid": node.get("authorsOrcid") or [],
+    }
+
+
 def _upstream_nodes(raw: dict, paper_doi: str) -> list[dict]:
-    """Quote / Question nodes attributable to `paper_doi`.
+    """Quote / Question nodes anchoring a chain.
 
     Upstream anchors sit above the AIDA and are not enumerated in `chains[]`.
-    Filtering by the *cited* paper is what keeps a neighbouring study's quotes
-    out — the depth-5 walk reaches plenty of them.
+
+    Quotes cite a paper, so they are filtered by the *cited* paper — that is
+    what keeps a neighbouring study's quotes out, and the depth-5 walk reaches
+    plenty of them. Questions cite nothing (a question-rooted chain need not
+    start from an existing work), so they cannot be filtered that way and are
+    always kept.
     """
     target = (paper_doi or "").strip().lower()
     out: list[dict] = []
 
     for node in raw.get("nodes") or []:
-        if node.get("stepKind") not in _UPSTREAM_KINDS:
+        kind = node.get("stepKind")
+        if kind not in _UPSTREAM_KINDS:
+            continue
+
+        if kind == "question":
+            out.append(_question_anchor(node))
             continue
 
         cited = ((node.get("quote") or {}).get("citedDoi") or "").strip().lower()
@@ -153,7 +191,7 @@ def _upstream_nodes(raw: dict, paper_doi: str) -> list[dict]:
 
         text, comment, provenance = _quote_text_and_comment(node)
         out.append({
-            "step": "Quote" if node["stepKind"] == "quote" else "Question",
+            "step": "Quote",
             "uri": node["uri"],
             "text": text,
             "text_source": provenance,
