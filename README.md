@@ -260,6 +260,38 @@ is checked by resolving it, a URL by comparing it to `repo_url`.
 Both published chains verify green, matching the hand-run verification recorded
 in marine-heatwave's ledger.
 
+### `validate_chain_draft(path)`
+
+Checks `nanopubs/chain-draft.json` — **the artifact that actually gets
+published** — before it is handed to the Science Live chain wizard. Run it at the
+end of Phase 5b, after `pixi run build-chain-draft` and before pushing the file
+and opening the wizard URL.
+
+The markdown drafts are the authoring format; `build_chain_draft.py` turns them
+plus `CITATION.cff` and the templates into this file, which the wizard pre-fills
+each step from and a human reviews and signs. `validate_draft` checks the input;
+this checks the artifact.
+
+What it catches that reading the file cannot:
+
+- a **superseded `template_uri`** — invisible in the JSON, but it makes the
+  wizard pre-fill the old form;
+- a `prefill` key that is neither a template field nor a known platform
+  form-field, which the wizard silently drops;
+- a complex field in the wrong shape — `06_citation.st02` must be
+  `[{cites, cited}]` with at least one entry, and `04_study.disciplineSelection`
+  is a **single object, not an array** (the one asymmetry in the contract);
+- a required field neither prefilled nor carried forward;
+- a value over the template's own cap, an invalid vocabulary term, a malformed
+  date, an unresolved `{{TOKEN}}`, or a DOI that does not resolve;
+- a `carry_forward` edge running backwards through the chain.
+
+Fields the wizard fills itself are exempt rather than reported missing:
+`02_aida` has no `project`, `03_claim` no `aida`, `04_study` no `claim`.
+
+Both of this project's real chain drafts validate clean, and 13 deliberate
+mutations of one are each caught.
+
 ### `validate_draft(path)` · `validate_drafts(directory)`
 
 The pre-flight checklist in `docs/forrt-form-fields.md`, actually executed. One
@@ -358,7 +390,7 @@ pip install -e '.[dev]'
 pytest
 ```
 
-All 167 tests are hermetic and need no network, no API key, and no live
+All 195 tests are hermetic and need no network, no API key, and no live
 service: the constellation fixtures are real recorded `/np/constellation`
 responses, quote tests build minimal PDFs in-process that reproduce the
 extraction artifacts deliberately, and the template/DOI/Wikidata tests stub HTTP
