@@ -105,6 +105,18 @@ def resolve_doi(doi: str) -> dict:
         return {"doi": bare, "resolves": True, "status": status,
                 "note": "resolves, but returned no parsable metadata"}
 
+    def first_string(value) -> str:
+        """CSL gives these as a string, a list, or an EMPTY list.
+
+        The empty list is the one that bites: `value[0]` raises IndexError, and
+        a real DOI (10.5194/nhess-2023-82) returns exactly that for
+        `container-title`. Crashing on a resolvable DOI is the worst outcome —
+        the caller cannot tell a tool bug from a bad identifier.
+        """
+        if isinstance(value, list):
+            return str(value[0]) if value else ""
+        return str(value) if value else ""
+
     title = csl.get("title")
     container = csl.get("container-title")
     return {
@@ -112,7 +124,7 @@ def resolve_doi(doi: str) -> dict:
         "resolves": True,
         "status": status,
         "url": f"{DOI_RESOLVER}{bare}",
-        "title": (title[0] if isinstance(title, list) else title) or "",
+        "title": first_string(title),
         "authors": [
             " ".join(p for p in (a.get("given"), a.get("family")) if p).strip()
             or a.get("literal", "")
@@ -120,7 +132,7 @@ def resolve_doi(doi: str) -> dict:
         ],
         "year": _year_of(csl),
         "type": csl.get("type", ""),
-        "container": (container[0] if isinstance(container, list) else container) or "",
+        "container": first_string(container),
         "publisher": csl.get("publisher", ""),
         "note": ("resolves. Check the title is the paper you mean — a DOI can be "
                  "real and still be the wrong one."),

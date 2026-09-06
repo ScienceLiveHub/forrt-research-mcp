@@ -205,3 +205,35 @@ class TestAgainstRealPublishedTerms:
                                limit=5)["candidates"][0]["typeMatches"] is True
         assert wikidata_lookup("marine heatwave", expected_type="Q16521",
                                limit=5)["candidates"][0]["typeMatches"] is False
+
+
+class TestCslShapeVariance:
+    """CSL fields arrive as a string, a list, or an EMPTY list. The empty list
+    is the one that bites: `value[0]` raises IndexError on a DOI that resolves
+    perfectly well, and a crash is the worst outcome — the caller cannot tell a
+    tool bug from a bad identifier. Found by resolving 10.5194/nhess-2023-82,
+    whose `container-title` is `[]`."""
+
+    @pytest.mark.parametrize("container,expected", [
+        ([], ""),
+        (["International Journal of Climatology"], "International Journal of Climatology"),
+        ("Nature", "Nature"),
+        (None, ""),
+    ])
+    def test_container_title_in_any_shape(self, monkeypatch, container, expected):
+        stub_http(monkeypatch, 200, json.dumps({**OLIVER_CSL, "container-title": container}))
+        assert resolve_doi("10.1038/x")["container"] == expected
+
+    @pytest.mark.parametrize("title,expected", [
+        ([], ""),
+        (["A title"], "A title"),
+        ("A title", "A title"),
+        (None, ""),
+    ])
+    def test_title_in_any_shape(self, monkeypatch, title, expected):
+        stub_http(monkeypatch, 200, json.dumps({**OLIVER_CSL, "title": title}))
+        assert resolve_doi("10.1038/x")["title"] == expected
+
+    def test_an_empty_container_still_resolves(self, monkeypatch):
+        stub_http(monkeypatch, 200, json.dumps({**OLIVER_CSL, "container-title": []}))
+        assert resolve_doi("10.1038/x")["resolves"] is True
