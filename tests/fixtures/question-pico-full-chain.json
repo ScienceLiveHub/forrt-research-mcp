@@ -1,0 +1,384 @@
+{
+  "entry": "https://w3id.org/sciencelive/np/RAQH-0xM29Hv1FG6bco_98x1tH4dEHf6yp5IevKtRmOko",
+  "paperDoi": "",
+  "apexCito": null,
+  "researchSynthesis": null,
+  "chains": [
+    {
+      "id": "RAW7XIpK-5SmVOoRoVPl-w_xjr9cqgM8xRRIKQ575RVXs",
+      "outcomeUri": "https://w3id.org/sciencelive/np/RAW7XIpK-5SmVOoRoVPl-w_xjr9cqgM8xRRIKQ575RVXs",
+      "outcomeVerdict": "Validated",
+      "outcomeConfidence": "Moderate",
+      "citoRelations": [
+        "credits"
+      ],
+      "steps": [
+        {
+          "step": "Question",
+          "uri": "https://w3id.org/sciencelive/np/RA3YO8FF5CbILzJU7-Gxf5C6VRxpkQDlA0cuEnVKtQziQ",
+          "label": "Does equal-area HEALPix gridding remove latitude bias from the power spectrum of satellite imagery?",
+          "text": "For Earth-observation satellite imagery, does computing the angular power spectrum on an equal-area HEALPix grid, compared with a regular geographic lon/lat grid, remove the latitude-dependent area bias in the spectral amplitude?",
+          "framework": "PICO",
+          "components": [
+            {
+              "key": "population",
+              "label": "Population",
+              "text": "Earth-observation optical satellite imagery (multispectral surface-reflectance scenes) at regional scale."
+            },
+            {
+              "key": "intervention",
+              "label": "Intervention",
+              "text": "Angular power spectrum analysis performed on an equal-area HEALPix tessellation of the sphere defined on the WGS84 ellipsoid."
+            },
+            {
+              "key": "comparator",
+              "label": "Comparator",
+              "text": "The same analysis on a regular geographic latitude/longitude grid, whose cells shrink in surface area towards the poles."
+            },
+            {
+              "key": "outcome",
+              "label": "Outcome",
+              "text": "Presence or absence of a latitude-dependent bias in the spectral amplitude / power as a function of spatial scale."
+            }
+          ]
+        },
+        {
+          "step": "AIDA",
+          "uri": "https://w3id.org/sciencelive/np/RA9SWUH4evnI3zQfnAmtLyM2CZHDr4Bkg5MKfRSTWErT0",
+          "text": "Computing the angular power spectrum of satellite imagery on an equal-area HEALPix grid removes the latitude-dependent area bias that a regular longitude/latitude grid introduces."
+        },
+        {
+          "step": "Claim",
+          "uri": "https://w3id.org/sciencelive/np/RAQH-0xM29Hv1FG6bco_98x1tH4dEHf6yp5IevKtRmOko",
+          "type": "data_quality",
+          "label": "Equal-area HEALPix removes latitude bias from the power spectrum of satellite imagery"
+        },
+        {
+          "step": "Study",
+          "uri": "https://w3id.org/sciencelive/np/RALm0wEYfKg4NKqTwY33LsGKIR7UH0Ut2IgYvX8uEeJMM",
+          "scope": "Whether the equal-area property of a HEALPix grid yields an angular power spectrum of an optical satellite scene that is free of the latitude-dependent\narea weighting a lon/lat grid imposes. In scope: a single regional Sentinel-2 L2A reflectance window analysed end to end on equal-area HEALPix. \n\nOut of scope: a fully quantified side-by-side lon/lat baseline, multi-scene statistics, atmospheric/cloud effects, and other sensors.",
+          "method": "Read a window of Sentinel-2 L2A band B04 directly from the public AWS Cloud-Optimized GeoTIFF archive. Compute the window's lon/lat bounding box and\ntile it with HEALPix cells on the WGS84 ellipsoid at depth 18 using GRID4EARTH healpix-geo (make_healpix_rectangle_from_lonlat / zone_coverage). Sample the\nreflectance at each equal-area cell centre, resample to a regular grid, apodise with a Tukey window, and compute the radially-averaged isotropic power spectrum\nwith GRID4EARTH healpix-analyse (ps). Because every HEALPix cell covers the same surface area, the spectrum carries no latitude-dependent area weighting. The\nwhole pipeline is orchestrated by a Snakemake workflow and runs from the public COG in seconds.",
+          "deviations": "Question-rooted: there is no prior equal-area-HEALPix power-spectrum pipeline for Sentinel-2 to deviate from. This is a fresh application of the equal-area approach using the GRID4EARTH stack."
+        },
+        {
+          "step": "Outcome",
+          "uri": "https://w3id.org/sciencelive/np/RAW7XIpK-5SmVOoRoVPl-w_xjr9cqgM8xRRIKQ575RVXs",
+          "label": "Sentinel-2 equal-area HEALPix power-spectrum outcome",
+          "verdict": "Validated",
+          "confidence": "Moderate",
+          "conclusion": "The angular power spectrum of a Sentinel-2 scene can be computed end to end on an equal-area HEALPix grid on the WGS84 ellipsoid with the GRID4EARTH stack\n(healpix-geo + healpix-analyse). Because every HEALPix cell covers the same surface area, the resulting spectrum carries none of the latitude-dependent area\nweighting that a lon/lat grid would impose \u2014 supporting the claim by construction. The spectrum shows the expected monotonic power-law fall-off with\nspatial frequency, the signature of a natural surface-reflectance field.",
+          "evidence": "Configuration and result recorded in results/powerspectrum.json:\n- scene S2A_22WEV_20190723, band B04 (red, 10 m), 256\u00d7256 px window (~2.6 km)\n- equal-area HEALPix at depth 18 (nside = 262144), ellipsoid = WGS84\n- field sampled at equal-area cell centres, then radially-averaged isotropic power spectrum computed with healpix-analyse `ps`\n- the spectrum (results/powerspectrum.png) falls off monotonically with spatial frequency on a log\u2013log axis (power-law behaviour), with no latitude-dependent amplitude term, because the cells are equal-area by construction.\n\nGithub repository: https://github.com/annefou/healpix-analyse-s2-powerspectrum",
+          "limitations": "The repo demonstrates the equal-area pipeline rather than quantifying the lon/lat bias it avoids: no side-by-side lon/lat baseline spectrum is computed here, so\nthe bias magnitude is argued by construction, not measured. Single scene, single band, single date; no atmospheric, cloud, or coastal effects; generalisation to other sensors and to a controlled multi-latitude comparison is left to follow-up.",
+          "repository": "https://doi.org/10.5281/zenodo.21000097"
+        },
+        {
+          "step": "CiTO",
+          "uri": "https://w3id.org/sciencelive/np/RAgu53IsEyWMVQB9kZL-RLwbZ0-zvtgvnWD4rSil2XpdQ",
+          "relations": [
+            "credits"
+          ],
+          "targets": [
+            "https://github.com/GRID4EARTH/healpix-analyse"
+          ]
+        }
+      ]
+    }
+  ],
+  "nodeCount": 7,
+  "edgeCount": 10,
+  "sparqlEndpoint": "https://query.knowledgepixels.com/repo/full",
+  "nodes": [
+    {
+      "uri": "https://w3id.org/sciencelive/np/RAQH-0xM29Hv1FG6bco_98x1tH4dEHf6yp5IevKtRmOko",
+      "stepKind": "claim",
+      "stepType": "Declaring an original claim according to FORRT",
+      "templateUri": "https://w3id.org/np/RAZWyM8D16ya3S1zhCvrG1f0iSpd9-8onVWp0FTvvX7LQ",
+      "label": "Equal-area HEALPix removes latitude bias from the power spectrum of satellite imagery",
+      "date": "2026-06-28T15:36:15.019Z",
+      "creators": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "creatorNames": [
+        "Anne Fouilloux"
+      ],
+      "authorsOrcid": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "plainTextExcerpts": [
+        "Equal-area HEALPix removes latitude bias from the power spectrum of satellite imagery",
+        "Anne Fouilloux"
+      ],
+      "githubUrls": [],
+      "claim": {
+        "claimType": "data_quality",
+        "aidaStatement": "http://purl.org/aida/Computing%20the%20angular%20power%20spectrum%20of%20satellite%20imagery%20on%20an%20equal-area%20HEALPix%20grid%20removes%20the%20latitude-dependent%20area%20bias%20that%20a%20regular%20longitude/latitude%20grid%20introduces."
+      }
+    },
+    {
+      "uri": "https://w3id.org/sciencelive/np/RAvKXxdajeUvKaRW4mvhn5JAB9S49V55FgWEt4kZa4mu4",
+      "stepKind": "research-software",
+      "stepType": "Describing research software at summary level - simple",
+      "templateUri": "https://w3id.org/np/RABBzVTxosLGT4YBCfdfNd6LyuOOTe2EVOTtWJMyOoZHk",
+      "label": "Software: GRID4EARTH healpix-analyse",
+      "date": "2026-06-28T15:54:00.515Z",
+      "creators": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "creatorNames": [
+        "Anne Fouilloux"
+      ],
+      "authorsOrcid": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "plainTextExcerpts": [
+        "Software: GRID4EARTH healpix-analyse",
+        "GRID4EARTH healpix-analyse",
+        "Anne Fouilloux"
+      ],
+      "githubUrls": [
+        "https://github.com/GRID4EARTH/healpix-analyse"
+      ],
+      "researchSoftware": {
+        "repository": "https://github.com/GRID4EARTH/healpix-analyse",
+        "zenodoDoi": "https://doi.org/10.5281/zenodo.21000097",
+        "supportsTargets": [
+          "https://doi.org/10.1086/427976",
+          "https://doi.org/10.5281/zenodo.21000097",
+          "https://grid4earth.github.io/healpix-analyse/"
+        ]
+      }
+    },
+    {
+      "uri": "https://w3id.org/sciencelive/np/RALm0wEYfKg4NKqTwY33LsGKIR7UH0Ut2IgYvX8uEeJMM",
+      "stepKind": "study",
+      "stepType": "Declaring a replication study design according to FORRT",
+      "templateUri": "https://w3id.org/np/RAuLEjPp-4dTvPwMkfHggTto1CgjIftiGRAgHlyeEonjQ",
+      "label": "Angular power spectrum of a Sentinel-2 scene on equal-area HEALPix",
+      "date": "2026-06-28T15:40:34.890Z",
+      "creators": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "creatorNames": [
+        "Anne Fouilloux"
+      ],
+      "authorsOrcid": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "plainTextExcerpts": [
+        "Read a window of Sentinel-2 L2A band B04 directly from the public AWS Cloud-Optimized GeoTIFF archive. Compute the window's lon/lat bounding box and\ntile it with HEALPix cells on the WGS84 ellipsoid at depth 18 using GRID4EARTH healpix-geo (make_healpix_rectangle_from_lonlat / zone_coverage). Sample the\nreflectance at each equal-area cell centre, resample to a regular grid, apodise with a Tukey window, and compute the radially-averaged isotropic power spectrum\nwith GRID4EARTH healpix-analyse (ps). Because every HEALPix cell covers the same surface area, the spectrum carries no latitude-dependent area weighting. The\nwhole pipeline is orchestrated by a Snakemake workflow and runs from the public COG in seconds.",
+        "Whether the equal-area property of a HEALPix grid yields an angular power spectrum of an optical satellite scene that is free of the latitude-dependent\narea weighting a lon/lat grid imposes. In scope: a single regional Sentinel-2 L2A reflectance window analysed end to end on equal-area HEALPix. \n\nOut of scope: a fully quantified side-by-side lon/lat baseline, multi-scene statistics, atmospheric/cloud effects, and other sensors.",
+        "Question-rooted: there is no prior equal-area-HEALPix power-spectrum pipeline for Sentinel-2 to deviate from. This is a fresh application of the equal-area approach using the GRID4EARTH stack.",
+        "Angular power spectrum of a Sentinel-2 scene on equal-area HEALPix"
+      ],
+      "githubUrls": [],
+      "study": {
+        "scope": "Whether the equal-area property of a HEALPix grid yields an angular power spectrum of an optical satellite scene that is free of the latitude-dependent\narea weighting a lon/lat grid imposes. In scope: a single regional Sentinel-2 L2A reflectance window analysed end to end on equal-area HEALPix. \n\nOut of scope: a fully quantified side-by-side lon/lat baseline, multi-scene statistics, atmospheric/cloud effects, and other sensors.",
+        "methodology": "Read a window of Sentinel-2 L2A band B04 directly from the public AWS Cloud-Optimized GeoTIFF archive. Compute the window's lon/lat bounding box and\ntile it with HEALPix cells on the WGS84 ellipsoid at depth 18 using GRID4EARTH healpix-geo (make_healpix_rectangle_from_lonlat / zone_coverage). Sample the\nreflectance at each equal-area cell centre, resample to a regular grid, apodise with a Tukey window, and compute the radially-averaged isotropic power spectrum\nwith GRID4EARTH healpix-analyse (ps). Because every HEALPix cell covers the same surface area, the spectrum carries no latitude-dependent area weighting. The\nwhole pipeline is orchestrated by a Snakemake workflow and runs from the public COG in seconds.",
+        "deviations": "Question-rooted: there is no prior equal-area-HEALPix power-spectrum pipeline for Sentinel-2 to deviate from. This is a fresh application of the equal-area approach using the GRID4EARTH stack.",
+        "discipline": "http://www.wikidata.org/entity/Q1348989",
+        "claimUri": "https://w3id.org/sciencelive/np/RAQH-0xM29Hv1FG6bco_98x1tH4dEHf6yp5IevKtRmOko/equal-area-removes-latitude-bias"
+      }
+    },
+    {
+      "uri": "https://w3id.org/sciencelive/np/RA9SWUH4evnI3zQfnAmtLyM2CZHDr4Bkg5MKfRSTWErT0",
+      "stepKind": "aida",
+      "stepType": "Expressing a statement about research as an AIDA sentence",
+      "templateUri": "https://w3id.org/np/RALmXhDw3rHcMveTgbv8VtWxijUHwnSqhCmtJFIPKWVaA",
+      "label": "AIDA sentence: Computing the angular power spectrum of satellite imagery on an equal-area HEALPix grid removes the latitude-dependent area bias that a regular longitude/latitude grid introduces.",
+      "date": "2026-06-28T15:33:30.173Z",
+      "creators": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "creatorNames": [
+        "Anne Fouilloux"
+      ],
+      "authorsOrcid": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "plainTextExcerpts": [
+        "AIDA sentence: Computing the angular power spectrum of satellite imagery on an equal-area HEALPix grid removes the latitude-dependent area bias that a regular longitude/latitude grid introduces.",
+        "Anne Fouilloux"
+      ],
+      "githubUrls": [],
+      "aida": {
+        "sentence": "Computing the angular power spectrum of satellite imagery on an equal-area HEALPix grid removes the latitude-dependent area bias that a regular longitude/latitude grid introduces."
+      }
+    },
+    {
+      "uri": "https://w3id.org/sciencelive/np/RAW7XIpK-5SmVOoRoVPl-w_xjr9cqgM8xRRIKQ575RVXs",
+      "stepKind": "outcome",
+      "stepType": "Declaring a replication study outcome according to FORRT",
+      "templateUri": "https://w3id.org/np/RA2zljn0Nw9SadppOyxZoh-_Rxosslrq-vYG-p9SttnJE",
+      "label": "Sentinel-2 equal-area HEALPix power-spectrum outcome",
+      "date": "2026-06-28T15:46:05.059Z",
+      "creators": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "creatorNames": [
+        "Anne Fouilloux"
+      ],
+      "authorsOrcid": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "plainTextExcerpts": [
+        "Configuration and result recorded in results/powerspectrum.json:\n- scene S2A_22WEV_20190723, band B04 (red, 10 m), 256\u00d7256 px window (~2.6 km)\n- equal-area HEALPix at depth 18 (nside = 262144), ellipsoid = WGS84\n- field sampled at equal-area cell centres, then radially-averaged isotropic power spectrum computed with healpix-analyse `ps`\n- the spectrum (results/powerspectrum.png) falls off monotonically with spatial frequency on a log\u2013log axis (power-law behaviour), with no latitude-dependent amplitude term, because the cells are equal-area by construction.\n\nGithub repository: https://github.com/annefou/healpix-analyse-s2-powerspectrum",
+        "The angular power spectrum of a Sentinel-2 scene can be computed end to end on an equal-area HEALPix grid on the WGS84 ellipsoid with the GRID4EARTH stack\n(healpix-geo + healpix-analyse). Because every HEALPix cell covers the same surface area, the resulting spectrum carries none of the latitude-dependent area\nweighting that a lon/lat grid would impose \u2014 supporting the claim by construction. The spectrum shows the expected monotonic power-law fall-off with\nspatial frequency, the signature of a natural surface-reflectance field.",
+        "The repo demonstrates the equal-area pipeline rather than quantifying the lon/lat bias it avoids: no side-by-side lon/lat baseline spectrum is computed here, so\nthe bias magnitude is argued by construction, not measured. Single scene, single band, single date; no atmospheric, cloud, or coastal effects; generalisation to other sensors and to a controlled multi-latitude comparison is left to follow-up.",
+        "Sentinel-2 equal-area HEALPix power-spectrum outcome"
+      ],
+      "githubUrls": [
+        "https://github.com/annefou/healpix-analyse-s2-powerspectrum"
+      ],
+      "outcome": {
+        "conclusion": "The angular power spectrum of a Sentinel-2 scene can be computed end to end on an equal-area HEALPix grid on the WGS84 ellipsoid with the GRID4EARTH stack\n(healpix-geo + healpix-analyse). Because every HEALPix cell covers the same surface area, the resulting spectrum carries none of the latitude-dependent area\nweighting that a lon/lat grid would impose \u2014 supporting the claim by construction. The spectrum shows the expected monotonic power-law fall-off with\nspatial frequency, the signature of a natural surface-reflectance field.",
+        "evidence": "Configuration and result recorded in results/powerspectrum.json:\n- scene S2A_22WEV_20190723, band B04 (red, 10 m), 256\u00d7256 px window (~2.6 km)\n- equal-area HEALPix at depth 18 (nside = 262144), ellipsoid = WGS84\n- field sampled at equal-area cell centres, then radially-averaged isotropic power spectrum computed with healpix-analyse `ps`\n- the spectrum (results/powerspectrum.png) falls off monotonically with spatial frequency on a log\u2013log axis (power-law behaviour), with no latitude-dependent amplitude term, because the cells are equal-area by construction.\n\nGithub repository: https://github.com/annefou/healpix-analyse-s2-powerspectrum",
+        "limitations": "The repo demonstrates the equal-area pipeline rather than quantifying the lon/lat bias it avoids: no side-by-side lon/lat baseline spectrum is computed here, so\nthe bias magnitude is argued by construction, not measured. Single scene, single band, single date; no atmospheric, cloud, or coastal effects; generalisation to other sensors and to a controlled multi-latitude comparison is left to follow-up.",
+        "validationStatus": "Validated",
+        "confidenceLevel": "Moderate",
+        "repository": "https://doi.org/10.5281/zenodo.21000097",
+        "studyUri": "https://w3id.org/sciencelive/np/RALm0wEYfKg4NKqTwY33LsGKIR7UH0Ut2IgYvX8uEeJMM/s2-equal-area-healpix-study",
+        "endDate": "2026-06-27"
+      }
+    },
+    {
+      "uri": "https://w3id.org/sciencelive/np/RA3YO8FF5CbILzJU7-Gxf5C6VRxpkQDlA0cuEnVKtQziQ",
+      "stepKind": "question",
+      "stepType": "Defining a PICO-based research question",
+      "templateUri": "https://w3id.org/np/RA5e5XeXy_-aNK5giB7kBAEQslTLVydHeM4YYEzhmEE2w",
+      "label": "Does equal-area HEALPix gridding remove latitude bias from the power spectrum of satellite imagery?",
+      "date": "2026-06-28T15:28:38.008Z",
+      "creators": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "creatorNames": [
+        "Anne Fouilloux"
+      ],
+      "authorsOrcid": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "plainTextExcerpts": [
+        "For Earth-observation satellite imagery, does computing the angular power spectrum on an equal-area HEALPix grid, compared with a regular geographic lon/lat grid, remove the latitude-dependent area bias in the spectral amplitude?",
+        "Angular power spectrum analysis performed on an equal-area HEALPix tessellation of the sphere defined on the WGS84 ellipsoid.",
+        "The same analysis on a regular geographic latitude/longitude grid, whose cells shrink in surface area towards the poles.",
+        "Presence or absence of a latitude-dependent bias in the spectral amplitude / power as a function of spatial scale."
+      ],
+      "githubUrls": [],
+      "question": {
+        "framework": "PICO",
+        "label": "Does equal-area HEALPix gridding remove latitude bias from the power spectrum of satellite imagery?",
+        "question": "For Earth-observation satellite imagery, does computing the angular power spectrum on an equal-area HEALPix grid, compared with a regular geographic lon/lat grid, remove the latitude-dependent area bias in the spectral amplitude?",
+        "components": [
+          {
+            "key": "population",
+            "label": "Population",
+            "text": "Earth-observation optical satellite imagery (multispectral surface-reflectance scenes) at regional scale."
+          },
+          {
+            "key": "intervention",
+            "label": "Intervention",
+            "text": "Angular power spectrum analysis performed on an equal-area HEALPix tessellation of the sphere defined on the WGS84 ellipsoid."
+          },
+          {
+            "key": "comparator",
+            "label": "Comparator",
+            "text": "The same analysis on a regular geographic latitude/longitude grid, whose cells shrink in surface area towards the poles."
+          },
+          {
+            "key": "outcome",
+            "label": "Outcome",
+            "text": "Presence or absence of a latitude-dependent bias in the spectral amplitude / power as a function of spatial scale."
+          }
+        ]
+      }
+    },
+    {
+      "uri": "https://w3id.org/sciencelive/np/RAgu53IsEyWMVQB9kZL-RLwbZ0-zvtgvnWD4rSil2XpdQ",
+      "stepKind": "cito",
+      "stepType": "Declare citations with CiTO",
+      "templateUri": "https://w3id.org/np/RA43F9EoOuzF0xoNUnCMNyFsfIqlsuWDdPHCnN0wCdCAw",
+      "label": "Citations for: RAW7XIpK-5SmVOoRoVPl-w_xjr9cqgM8xRRIKQ575RVXs",
+      "date": "2026-06-28T15:52:34.520Z",
+      "creators": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "creatorNames": [
+        "Anne Fouilloux"
+      ],
+      "authorsOrcid": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "plainTextExcerpts": [
+        "Citations for: RAW7XIpK-5SmVOoRoVPl-w_xjr9cqgM8xRRIKQ575RVXs",
+        "Anne Fouilloux"
+      ],
+      "githubUrls": [
+        "https://github.com/GRID4EARTH/healpix-analyse"
+      ],
+      "cito": {
+        "relations": [
+          "credits"
+        ],
+        "citedTargets": [
+          "https://github.com/GRID4EARTH/healpix-analyse"
+        ],
+        "citingEntity": "https://w3id.org/sciencelive/np/RAW7XIpK-5SmVOoRoVPl-w_xjr9cqgM8xRRIKQ575RVXs"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "https://w3id.org/sciencelive/np/RAQH-0xM29Hv1FG6bco_98x1tH4dEHf6yp5IevKtRmOko",
+      "target": "https://w3id.org/sciencelive/np/RAvKXxdajeUvKaRW4mvhn5JAB9S49V55FgWEt4kZa4mu4",
+      "relation": "refersTo"
+    },
+    {
+      "source": "https://w3id.org/sciencelive/np/RAQH-0xM29Hv1FG6bco_98x1tH4dEHf6yp5IevKtRmOko",
+      "target": "https://w3id.org/sciencelive/np/RALm0wEYfKg4NKqTwY33LsGKIR7UH0Ut2IgYvX8uEeJMM",
+      "relation": "refersTo"
+    },
+    {
+      "source": "https://w3id.org/sciencelive/np/RAQH-0xM29Hv1FG6bco_98x1tH4dEHf6yp5IevKtRmOko",
+      "target": "https://w3id.org/sciencelive/np/RA9SWUH4evnI3zQfnAmtLyM2CZHDr4Bkg5MKfRSTWErT0",
+      "relation": "refersTo"
+    },
+    {
+      "source": "https://w3id.org/sciencelive/np/RAvKXxdajeUvKaRW4mvhn5JAB9S49V55FgWEt4kZa4mu4",
+      "target": "https://w3id.org/sciencelive/np/RAQH-0xM29Hv1FG6bco_98x1tH4dEHf6yp5IevKtRmOko",
+      "relation": "refersTo"
+    },
+    {
+      "source": "https://w3id.org/sciencelive/np/RALm0wEYfKg4NKqTwY33LsGKIR7UH0Ut2IgYvX8uEeJMM",
+      "target": "https://w3id.org/sciencelive/np/RAW7XIpK-5SmVOoRoVPl-w_xjr9cqgM8xRRIKQ575RVXs",
+      "relation": "refersTo"
+    },
+    {
+      "source": "https://w3id.org/sciencelive/np/RALm0wEYfKg4NKqTwY33LsGKIR7UH0Ut2IgYvX8uEeJMM",
+      "target": "https://w3id.org/sciencelive/np/RAQH-0xM29Hv1FG6bco_98x1tH4dEHf6yp5IevKtRmOko",
+      "relation": "refersTo"
+    },
+    {
+      "source": "https://w3id.org/sciencelive/np/RA9SWUH4evnI3zQfnAmtLyM2CZHDr4Bkg5MKfRSTWErT0",
+      "target": "https://w3id.org/sciencelive/np/RA3YO8FF5CbILzJU7-Gxf5C6VRxpkQDlA0cuEnVKtQziQ",
+      "relation": "refersTo"
+    },
+    {
+      "source": "https://w3id.org/sciencelive/np/RAW7XIpK-5SmVOoRoVPl-w_xjr9cqgM8xRRIKQ575RVXs",
+      "target": "https://w3id.org/sciencelive/np/RAgu53IsEyWMVQB9kZL-RLwbZ0-zvtgvnWD4rSil2XpdQ",
+      "relation": "refersTo"
+    },
+    {
+      "source": "https://w3id.org/sciencelive/np/RAW7XIpK-5SmVOoRoVPl-w_xjr9cqgM8xRRIKQ575RVXs",
+      "target": "https://w3id.org/sciencelive/np/RALm0wEYfKg4NKqTwY33LsGKIR7UH0Ut2IgYvX8uEeJMM",
+      "relation": "refersTo"
+    },
+    {
+      "source": "https://w3id.org/sciencelive/np/RAgu53IsEyWMVQB9kZL-RLwbZ0-zvtgvnWD4rSil2XpdQ",
+      "target": "https://w3id.org/sciencelive/np/RAW7XIpK-5SmVOoRoVPl-w_xjr9cqgM8xRRIKQ575RVXs",
+      "relation": "refersTo"
+    }
+  ],
+  "externalCitations": [
+    "https://doi.org/10.1086/427976",
+    "https://doi.org/10.5281/zenodo.21000097"
+  ]
+}

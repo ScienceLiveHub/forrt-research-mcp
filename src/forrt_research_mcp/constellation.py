@@ -133,18 +133,56 @@ def cited_paper(raw: dict) -> dict:
     }
 
 
+def _question_anchor(node: dict) -> dict:
+    """A PICO or PCC question anchor.
+
+    Question nodes carry their content in a `question` object — `framework`,
+    `label`, the question text, and the framework's components — not in the
+    `quote` fields, and their top-level `label` is empty. Reading them like a
+    quote returns nothing at all, which is what a first version did.
+    """
+    q = node.get("question") or {}
+    components = [
+        {"key": c.get("key", ""), "label": c.get("label", ""), "text": c.get("text", "")}
+        for c in (q.get("components") or [])
+    ]
+    return {
+        "step": "Question",
+        "uri": node["uri"],
+        "framework": q.get("framework", ""),
+        "label": q.get("label", ""),
+        "text": q.get("question", ""),
+        "text_source": "structured" if q.get("question") else "missing",
+        "components": components,
+        "comment": "",
+        "citedDoi": "",
+        "date": node.get("date") or "",
+        "creators": node.get("creatorNames") or [],
+        "authorsOrcid": node.get("authorsOrcid") or [],
+    }
+
+
 def _upstream_nodes(raw: dict, paper_doi: str) -> list[dict]:
-    """Quote / Question nodes attributable to `paper_doi`.
+    """Quote / Question nodes anchoring a chain.
 
     Upstream anchors sit above the AIDA and are not enumerated in `chains[]`.
-    Filtering by the *cited* paper is what keeps a neighbouring study's quotes
-    out — the depth-5 walk reaches plenty of them.
+
+    Quotes cite a paper, so they are filtered by the *cited* paper — that is
+    what keeps a neighbouring study's quotes out, and the depth-5 walk reaches
+    plenty of them. Questions cite nothing (a question-rooted chain need not
+    start from an existing work), so they cannot be filtered that way and are
+    always kept.
     """
     target = (paper_doi or "").strip().lower()
     out: list[dict] = []
 
     for node in raw.get("nodes") or []:
-        if node.get("stepKind") not in _UPSTREAM_KINDS:
+        kind = node.get("stepKind")
+        if kind not in _UPSTREAM_KINDS:
+            continue
+
+        if kind == "question":
+            out.append(_question_anchor(node))
             continue
 
         cited = ((node.get("quote") or {}).get("citedDoi") or "").strip().lower()
@@ -153,7 +191,7 @@ def _upstream_nodes(raw: dict, paper_doi: str) -> list[dict]:
 
         text, comment, provenance = _quote_text_and_comment(node)
         out.append({
-            "step": "Quote" if node["stepKind"] == "quote" else "Question",
+            "step": "Quote",
             "uri": node["uri"],
             "text": text,
             "text_source": provenance,
@@ -165,6 +203,35 @@ def _upstream_nodes(raw: dict, paper_doi: str) -> list[dict]:
 
     out.sort(key=lambda n: n["date"])
     return out
+
+
+def _shallow_entry_hint(raw: dict, chains: list[dict]) -> str:
+    """Warn when the entry URI is too shallow to reach its own chain.
+
+    The walk crosses Claim -> AIDA (the platform bridges the shared
+    `purl.org/aida/` statement IRI) but NOT AIDA -> Claim: that link is not a
+    nanopub reference, so it has no `npa:refersToNanopub` edge to follow
+    upstream. Entering at a Question or an AIDA therefore returns only the
+    anchor and stops, even when a complete six-step chain is published on it.
+
+    Verified 2026-09-05 on two real question-rooted chains: entering at the
+    Question gave 1 node, at the AIDA 2 nodes, at the Claim all 7 with every
+    step enumerated.
+    """
+    if chains:
+        return ""
+    entry = (raw.get("entry") or "").strip()
+    kinds = {n.get("uri"): n.get("stepKind") for n in raw.get("nodes") or []}
+    entry_kind = kinds.get(entry) or next(iter(kinds.values()), "")
+    if entry_kind not in ("question", "quote", "aida"):
+        return ""
+    return (
+        f"No chain was reachable, but the entry is a {entry_kind!r} node — the "
+        f"walk cannot follow AIDA -> Claim upstream, because that link is a "
+        f"shared purl.org/aida/ statement IRI rather than a nanopub reference. "
+        f"A complete chain may still be published on this anchor. Re-enter at "
+        f"the Claim or deeper (Outcome, CiTO, Synthesis) to see it."
+    )
 
 
 def summary(uri: str, *, depth: int = 5, max_nodes: int = 80,
@@ -210,6 +277,7 @@ def summary(uri: str, *, depth: int = 5, max_nodes: int = 80,
     apex = data.get("apexCito") or None
     synthesis = data.get("researchSynthesis") or None
     paper = cited_paper(data)
+    entry_hint = _shallow_entry_hint(data, chains)
 
     return {
         "entry": data.get("entry") or uri,
@@ -226,6 +294,7 @@ def summary(uri: str, *, depth: int = 5, max_nodes: int = 80,
             "label": synthesis.get("label", ""),
         } if synthesis else None,
         "externalCitations": data.get("externalCitations") or [],
+        **({"entryTooShallow": entry_hint} if entry_hint else {}),
         # Kept so a caller can see how much was dropped, without carrying it.
         "neighbourhood": {
             "nodeCount": data.get("nodeCount", 0),

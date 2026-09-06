@@ -8,7 +8,12 @@ from __future__ import annotations
 
 import pytest
 
-from forrt_research_mcp.quotes import MIN_QUOTE_CHARS, QuoteError, verify_quote
+from forrt_research_mcp.quotes import (
+    MIN_QUOTE_CHARS,
+    MIN_WHITESPACE_INSENSITIVE_CHARS,
+    QuoteError,
+    verify_quote,
+)
 
 # The real sentence from Oliver et al. 2018 that the marine-heatwave chain quotes.
 SENTENCE = ("The increases in frequency and duration metrics translate to 30 additional "
@@ -157,3 +162,83 @@ class TestGuards:
         assert MIN_QUOTE_CHARS == 20
         with pytest.raises(QuoteError):
             verify_quote(str(clean_pdf), "x" * (MIN_QUOTE_CHARS - 1))
+
+
+class TestWhitespaceInsensitiveTier:
+    """Some text layers insert spaces INSIDE words. Hundhausen et al. 2024
+    renders its own abstract as "CP en semble", "largest c hanges", "prec
+    ipitation" — the quotation is correct and the PDF is broken. No punctuation
+    rule recovers that, because the damage is inside the token."""
+
+    BROKEN = ("A maximum climate change signal of 6-8.5% increase per degree of GW is "
+              "projected within the CP en semble, with the largest c hanges expected "
+              "for short durations and long RPs.")
+    INTENDED = ("A maximum climate change signal of 6–8.5% increase per degree of GW is "
+                "projected within the CP ensemble, with the largest changes expected "
+                "for short durations and long RPs.")
+
+    @pytest.fixture
+    def broken_pdf(self, write_pdf):
+        return str(write_pdf([self.BROKEN]))
+
+    def test_a_word_broken_by_a_stray_space_still_matches(self, broken_pdf):
+        result = verify_quote(broken_pdf, self.INTENDED)
+        assert result["found"] is True
+        assert result["match"] == "whitespace_insensitive"
+        assert "ignore-all-whitespace" in result["transforms"]
+
+    def test_it_warns_that_word_boundaries_were_not_verified(self, broken_pdf):
+        note = verify_quote(broken_pdf, self.INTENDED)["note"]
+        assert "word boundaries were NOT verified" in note
+
+    def test_matched_text_shows_the_broken_page_not_the_stripped_key(self, broken_pdf):
+        """The caller must be able to see what the PDF actually says."""
+        assert "en semble" in verify_quote(broken_pdf, self.INTENDED)["matched_text"]
+
+    @pytest.mark.parametrize("altered,label", [
+        (INTENDED.replace("6–8.5%", "7–8.5%"), "changed number"),
+        (INTENDED.replace("short durations and long RPs",
+                          "long durations and short RPs"), "reversed the claim"),
+        (INTENDED.replace("increase", "decrease"), "reversed direction"),
+    ])
+    def test_deleting_spaces_does_not_let_content_changes_through(
+            self, broken_pdf, altered, label):
+        assert verify_quote(broken_pdf, altered)["found"] is False, label
+
+    def test_a_stricter_tier_still_wins_when_it_can(self, write_pdf):
+        """Tiers are ordered; a clean page must not be reported as the loosest.
+
+        ASCII only here: the minimal-PDF fixture writes latin-1, so it cannot
+        carry the en-dash the real abstract uses."""
+        clean = ("A maximum climate change signal of 6-8.5% increase per degree of "
+                 "GW is projected within the CP ensemble.")
+        pdf = str(write_pdf([clean]))
+        assert verify_quote(pdf, clean)["match"] == "exact"
+
+    def test_short_quotations_decline_the_loosest_tier(self, write_pdf):
+        """Deleting every space could let two short texts collide, so below the
+        threshold the tier simply does not run."""
+        pdf = str(write_pdf(["the rapist entered the room quietly"]))
+        short = "therapist entered the room"   # 26 chars
+        assert MIN_QUOTE_CHARS <= len(short) < MIN_WHITESPACE_INSENSITIVE_CHARS
+        assert verify_quote(pdf, short)["found"] is False
+
+
+class TestHyphenationAcrossLines:
+    """Real PDFs split words at line ends. Hundhausen et al. 2024 contains
+    `convection-\\npermitting`, `param-\\netrized`, `compo-\\nnent`."""
+
+    def test_a_word_split_at_a_line_break_is_rejoined(self, write_pdf):
+        pdf = write_pdf(["We use a novel convection-", "permitting ensemble here."])
+        result = verify_quote(
+            pdf, "We use a novel convection-permitting ensemble here.")
+        assert result["found"] is True
+
+    def test_a_suspended_hyphen_is_NOT_joined(self, write_pdf):
+        """The only `hyphen + space` cases in that paper are `15- and`, `over-
+        and` — genuine suspended hyphens. Joining them would corrupt the text,
+        so the rejoin rule deliberately requires a line break."""
+        pdf = write_pdf(["We compare 15- and 30-minute accumulations here."])
+        result = verify_quote(pdf, "We compare 15- and 30-minute accumulations here.")
+        assert result["found"] is True
+        assert "15- and" in result["matched_text"] or result["match"] == "exact"

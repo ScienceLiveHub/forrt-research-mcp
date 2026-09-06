@@ -63,6 +63,10 @@ _SPACE_BEFORE_CLOSE = re.compile(r"\s+([)\]}])")
 _SPACE_BEFORE_PUNCT = re.compile(r"\s+([,;:.!?])")
 
 MIN_QUOTE_CHARS = 20
+# Below this length, deleting every space could let two different texts collide
+# ("the rapist" / "therapist"). A real quotation is far longer; a short one is
+# not worth the risk, so the loosest tier declines to run.
+MIN_WHITESPACE_INSENSITIVE_CHARS = 40
 
 
 class QuoteError(ValueError):
@@ -123,6 +127,22 @@ def _tolerate_extraction(text: str) -> tuple[str, list[str]]:
         out = tightened
 
     return out, applied
+
+
+def _ignore_all_whitespace(text: str) -> tuple[str, list[str]]:
+    """Delete every space, on top of `_tolerate_extraction`.
+
+    Some PDFs insert spaces *inside* words. Hundhausen et al. 2024 renders its
+    own abstract as "CP en semble", "largest c hanges", "prec ipitation" — the
+    quotation is correct and the text layer is broken. No amount of tolerant
+    punctuation handling recovers that, because the damage is inside the token.
+
+    Word boundaries are destroyed by this, which is why it is the last tier and
+    reports under its own name. Letters, digits and their ORDER must still match
+    exactly, so a changed number or a dropped clause still fails at this tier.
+    """
+    out = _WHITESPACE.sub("", text)
+    return out, (["ignore-all-whitespace"] if out != text else [])
 
 
 def _page_texts(pdf_path: Path) -> list[str]:
@@ -246,6 +266,34 @@ def verify_quote(pdf_path: str, quotation: str) -> dict:
                          "their order are identical. Read `matched_text` and confirm "
                          "it is the sentence you mean before publishing it."),
             }
+
+    # Pass 4 — identical once every space is deleted. Last resort: some text
+    # layers insert spaces inside words, which no punctuation rule can undo.
+    if len(quotation) >= MIN_WHITESPACE_INSENSITIVE_CHARS:
+        bare_needle, bare_needle_transforms = _ignore_all_whitespace(loose_needle)
+        for number, (haystack, page_transforms) in enumerate(normalized_pages, start=1):
+            loose_haystack, loose_page_transforms = _tolerate_extraction(haystack)
+            bare_haystack, bare_page_transforms = _ignore_all_whitespace(loose_haystack)
+            index = bare_haystack.find(bare_needle)
+            if index >= 0:
+                return {
+                    **evidence, "found": True, "match": "whitespace_insensitive",
+                    "page": number,
+                    "char_start": index, "char_end": index + len(bare_needle),
+                    # Show the page's readable text, not the space-stripped key.
+                    "matched_text": _closest_passage(loose_needle, haystack)[1],
+                    "transforms": sorted(
+                        set(needle_transforms) | set(page_transforms)
+                        | set(loose_needle_transforms) | set(loose_page_transforms)
+                        | set(bare_needle_transforms) | set(bare_page_transforms)
+                    ),
+                    "note": ("matched only after deleting every space, because this "
+                             "PDF's text layer breaks words apart (e.g. 'en semble' "
+                             "for 'ensemble'). Letters, digits and their order still "
+                             "matched exactly, so the words are the paper's — but "
+                             "word boundaries were NOT verified. Read `matched_text` "
+                             "and confirm it is the sentence you mean."),
+                }
 
     return {
         **evidence, "found": False, "match": "not_found", "page": None,

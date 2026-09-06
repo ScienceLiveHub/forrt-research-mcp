@@ -44,6 +44,13 @@ has no type to look up.
 with a dedicated tool, because a quotation is the one field whose correctness
 can be *proved* rather than reviewed.
 
+`constellation` and `prior_work` surface a question anchor with its `framework`,
+`label`, full question text and its framework's `components` — PICO's
+population / intervention / comparator / outcome, PCC's population / concept /
+context. Question nodes keep all of that in a `question` object and leave their
+top-level `label` empty, so anything reading them like a quote returns nothing.
+Tested against two real published question nanopubs.
+
 For a study starting from scratch, the Claim is **your own hypothesis**, derived
 from your own question or from the work you are building on. The FORRT Claim
 template's `source` is optional, so it needs no external paper — and the
@@ -146,6 +153,7 @@ SHA-256:
 | `exact` | byte-identical to the extracted page text |
 | `normalized` | matched after whitespace / ligature / typographic punctuation / line-break-hyphen repair |
 | `extraction_tolerant` | additionally ignored hyphens and punctuation spacing |
+| `whitespace_insensitive` | additionally deleted every space — for text layers that break words apart |
 | `not_found` | **not in this PDF — do not publish it** |
 
 Every tier canonicalises *formatting only* — never words, digits or order. A
@@ -153,12 +161,25 @@ quotation with one digit changed scores ~0.91 similarity against the source and
 is still `not_found`; on a miss, `closest.text_in_pdf` shows what the paper
 actually says there.
 
-A tier below `exact` is normal. PDF extraction inserts line breaks and loses
-hyphens: the quotation published in the real marine-heatwave chain matches only
-at `extraction_tolerant`, because `pypdf` reads the paper's `35-year` as
-`35year` and `(p <` as `( p <`. **"Character-for-character" is not literally
-achievable against extracted PDF text**, which is why the result is graded
-rather than boolean.
+A tier below `exact` is normal. PDF extraction inserts line breaks, loses
+hyphens, and sometimes breaks words apart entirely:
+
+- the quotation published in the real marine-heatwave chain matches only at
+  `extraction_tolerant`, because `pypdf` reads the paper's `35-year` as `35year`
+  and `(p <` as `( p <`;
+- Hundhausen et al. 2024 renders its own abstract as `CP en semble`, `largest c
+  hanges`, `prec ipitation` — spaces *inside* words, which no punctuation rule
+  can undo. That needs `whitespace_insensitive`, which deletes every space and
+  therefore does not verify word boundaries; it declines to run below 40
+  characters, where two short texts could collide.
+
+**"Character-for-character" is not literally achievable against extracted PDF
+text**, which is why the result is graded rather than boolean.
+
+Words split across a line break (`convection-\npermitting`) are rejoined at the
+`normalized` tier. A *suspended* hyphen (`15- and 30-minute`) is deliberately
+NOT rejoined — the rule requires a line break, because joining those would
+corrupt the text.
 
 ### `constellation(uri, depth=5, max_nodes=80)`
 
@@ -260,6 +281,38 @@ is checked by resolving it, a URL by comparing it to `repo_url`.
 Both published chains verify green, matching the hand-run verification recorded
 in marine-heatwave's ledger.
 
+### `validate_chain_draft(path)`
+
+Checks `nanopubs/chain-draft.json` — **the artifact that actually gets
+published** — before it is handed to the Science Live chain wizard. Run it at the
+end of Phase 5b, after `pixi run build-chain-draft` and before pushing the file
+and opening the wizard URL.
+
+The markdown drafts are the authoring format; `build_chain_draft.py` turns them
+plus `CITATION.cff` and the templates into this file, which the wizard pre-fills
+each step from and a human reviews and signs. `validate_draft` checks the input;
+this checks the artifact.
+
+What it catches that reading the file cannot:
+
+- a **superseded `template_uri`** — invisible in the JSON, but it makes the
+  wizard pre-fill the old form;
+- a `prefill` key that is neither a template field nor a known platform
+  form-field, which the wizard silently drops;
+- a complex field in the wrong shape — `06_citation.st02` must be
+  `[{cites, cited}]` with at least one entry, and `04_study.disciplineSelection`
+  is a **single object, not an array** (the one asymmetry in the contract);
+- a required field neither prefilled nor carried forward;
+- a value over the template's own cap, an invalid vocabulary term, a malformed
+  date, an unresolved `{{TOKEN}}`, or a DOI that does not resolve;
+- a `carry_forward` edge running backwards through the chain.
+
+Fields the wizard fills itself are exempt rather than reported missing:
+`02_aida` has no `project`, `03_claim` no `aida`, `04_study` no `claim`.
+
+Both of this project's real chain drafts validate clean, and 13 deliberate
+mutations of one are each caught.
+
 ### `validate_draft(path)` · `validate_drafts(directory)`
 
 The pre-flight checklist in `docs/forrt-form-fields.md`, actually executed. One
@@ -308,6 +361,12 @@ forms. A 5xx is reported as transient rather than as a bad DOI.
 Real Wikidata candidates for a term, with their actual P31/P279 types. Pass
 `expected_type` as a QID and each candidate is marked `typeMatches`.
 
+Checked against the ten Wikidata terms in this project's published chains — the
+QIDs `build_chain_draft.py` resolved and signed — it returns the published QID
+at rank 1 for all ten (marine heatwave, sea surface temperature, climate change,
+time series analysis, chlorophyll a, remote sensing, estuary, Sentinel-2, water
+quality, atmospheric correction).
+
 It deliberately **does not choose** — picking the right sense of an ambiguous
 label is a judgement. Searching `Bombus` with `Q16521` (taxon) returns the
 insect genus as a match and *the album of the same name* as not, which is
@@ -351,6 +410,27 @@ unrelated studies):
    a status-only reachability check passes even when no nanopub is served. We
    normalise to the bare `w3id.org/np/` resolver and assert the body is RDF.
 
+## Checking against every real artefact
+
+The test suite is hermetic: it pins behaviour against recorded data, which
+prevents regressions but **cannot discover a wrong premise**. Every serious bug
+in this server was a wrong premise, and each surfaced only when the tools met
+real data they had not seen. So "have we tested comprehensively?" is not a
+judgement call here — it is a computation with a visible denominator:
+
+```bash
+python scripts/check_corpus.py /path/to/your/study/repos
+```
+
+It discovers every repository with a `nanopubs/` directory, runs the applicable
+tools against each artefact, and prints what passed out of what was found.
+Findings are *not* automatically failures — an empty required field is a true
+statement about a draft. What it exits non-zero for is a **crash or a parse
+failure**, because those mean a tool could not read a real artefact at all.
+
+The denominator is only as good as what is on disk. A chain that is not under
+that root is not covered, and a green run does not say otherwise.
+
 ## Development
 
 ```bash
@@ -358,7 +438,7 @@ pip install -e '.[dev]'
 pytest
 ```
 
-All 167 tests are hermetic and need no network, no API key, and no live
+All 287 tests are hermetic and need no network, no API key, and no live
 service: the constellation fixtures are real recorded `/np/constellation`
 responses, quote tests build minimal PDFs in-process that reproduce the
 extraction artifacts deliberately, and the template/DOI/Wikidata tests stub HTTP

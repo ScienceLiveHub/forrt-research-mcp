@@ -25,6 +25,7 @@ separate *value-list nanopub* via `possibleValuesFrom`, which is a flat set of
 from __future__ import annotations
 
 import json
+import re
 from functools import lru_cache
 from importlib import resources
 
@@ -54,6 +55,39 @@ VOCABULARIES: dict[str, tuple[str, str]] = {
 # fits is independent of whether the study is a reproduction, a replication or
 # original research.
 ANCHOR_STEPS = ("01_quote", "01_pico", "01_pcc")
+
+
+_DASHES = {"‐": "-", "‑": "-", "‒": "-", "–": "-",
+           "—": "-", "―": "-", "−": "-"}
+
+
+def _term_key(text: str) -> str:
+    """Canonical form for comparing a drafted value against a vocabulary term.
+
+    A drafter retyping an option reproduces its meaning, not its typography:
+    real drafts write "Replication Study — replication with different
+    methodology or conditions." where the template has an ASCII hyphen and no
+    full stop. Rejecting that is a false failure on a correct value, so dashes,
+    whitespace and trailing punctuation are canonicalised before matching.
+    Words are untouched — a genuinely different option still fails.
+    """
+    out = (text or "").strip().lower()
+    for src, dst in _DASHES.items():
+        out = out.replace(src, dst)
+    out = re.sub(r"\s+", " ", out)
+    return out.strip(" .,;:")
+
+
+def matches_term(value: str, term: dict) -> bool:
+    """Does a drafted value name this vocabulary term?"""
+    probe = _term_key(value)
+    if not probe:
+        return False
+    label, uri = _term_key(term.get("label", "")), (term.get("uri") or "").lower()
+    return bool(
+        (label and (probe == label or label.startswith(probe) or probe.startswith(label)))
+        or (uri and (probe == uri.lower() or probe in uri.lower()))
+    )
 
 
 def _data(name: str) -> dict:
