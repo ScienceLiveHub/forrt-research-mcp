@@ -153,6 +153,7 @@ SHA-256:
 | `exact` | byte-identical to the extracted page text |
 | `normalized` | matched after whitespace / ligature / typographic punctuation / line-break-hyphen repair |
 | `extraction_tolerant` | additionally ignored hyphens and punctuation spacing |
+| `whitespace_insensitive` | additionally deleted every space — for text layers that break words apart |
 | `not_found` | **not in this PDF — do not publish it** |
 
 Every tier canonicalises *formatting only* — never words, digits or order. A
@@ -160,12 +161,25 @@ quotation with one digit changed scores ~0.91 similarity against the source and
 is still `not_found`; on a miss, `closest.text_in_pdf` shows what the paper
 actually says there.
 
-A tier below `exact` is normal. PDF extraction inserts line breaks and loses
-hyphens: the quotation published in the real marine-heatwave chain matches only
-at `extraction_tolerant`, because `pypdf` reads the paper's `35-year` as
-`35year` and `(p <` as `( p <`. **"Character-for-character" is not literally
-achievable against extracted PDF text**, which is why the result is graded
-rather than boolean.
+A tier below `exact` is normal. PDF extraction inserts line breaks, loses
+hyphens, and sometimes breaks words apart entirely:
+
+- the quotation published in the real marine-heatwave chain matches only at
+  `extraction_tolerant`, because `pypdf` reads the paper's `35-year` as `35year`
+  and `(p <` as `( p <`;
+- Hundhausen et al. 2024 renders its own abstract as `CP en semble`, `largest c
+  hanges`, `prec ipitation` — spaces *inside* words, which no punctuation rule
+  can undo. That needs `whitespace_insensitive`, which deletes every space and
+  therefore does not verify word boundaries; it declines to run below 40
+  characters, where two short texts could collide.
+
+**"Character-for-character" is not literally achievable against extracted PDF
+text**, which is why the result is graded rather than boolean.
+
+Words split across a line break (`convection-\npermitting`) are rejoined at the
+`normalized` tier. A *suspended* hyphen (`15- and 30-minute`) is deliberately
+NOT rejoined — the rule requires a line break, because joining those would
+corrupt the text.
 
 ### `constellation(uri, depth=5, max_nodes=80)`
 
@@ -424,7 +438,7 @@ pip install -e '.[dev]'
 pytest
 ```
 
-All 277 tests are hermetic and need no network, no API key, and no live
+All 287 tests are hermetic and need no network, no API key, and no live
 service: the constellation fixtures are real recorded `/np/constellation`
 responses, quote tests build minimal PDFs in-process that reproduce the
 extraction artifacts deliberately, and the template/DOI/Wikidata tests stub HTTP
