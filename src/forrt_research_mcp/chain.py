@@ -27,8 +27,12 @@ from .constellation import summary as _summary
 from .grounding import GroundingError, resolve_doi
 
 # `| 05 | FORRT Replication Outcome | https://w3id.org/…/RA… | 2026-08-15 |`
+# The URI cell, not the whole row's third field: a ledger may write the URI
+# bare, in backticks, or as a markdown link. `\S+` matched only the first
+# whitespace-free token, so `[`RA…`](https://…)` failed to parse and a fully
+# published chain was reported as having no URIs at all.
 _ROW_RE = re.compile(
-    r"^\|\s*(\d{2})\s*\|([^|]*)\|\s*(\S+)\s*\|", re.M)
+    r"^\|\s*(\d{2})\s*\|([^|]*)\|([^|]*)\|", re.M)
 _URI_RE = re.compile(r"^https://w3id\.org/(?:sciencelive/)?np/RA[A-Za-z0-9_-]{20,}$")
 _ANY_URI_RE = re.compile(r"https://w3id\.org/(?:sciencelive/)?np/RA[A-Za-z0-9_-]{20,}")
 
@@ -65,12 +69,26 @@ def _row(status: str, check: str, message: str, **extra) -> dict:
 
 
 def parse_published(text: str) -> dict[str, str]:
-    """Step number -> published URI, skipping rows with no URI yet."""
+    """Step number -> published URI, skipping rows with no URI yet.
+
+    Liberal in what it accepts from the URI cell. Ledgers are written by hand
+    and the URI turns up bare, in backticks, or as a markdown link:
+
+        | 05 | Outcome | https://w3id.org/sciencelive/np/RA...        |
+        | 05 | Outcome | `https://w3id.org/sciencelive/np/RA...`      |
+        | 05 | Outcome | [`RACgxEz...`](https://w3id.org/.../RA...)   |
+
+    All three name the same nanopub. An earlier version required the cell to BE
+    the URI, so the markdown-link form parsed as zero URIs and `verify_chain`
+    reported "no published URIs found" for a chain that was fully published --
+    the second time a ledger layout produced a wrong verdict rather than an
+    honest "I cannot read this" (see `unparsed_uris`).
+    """
     found: dict[str, str] = {}
-    for step, _template, uri in _ROW_RE.findall(text):
-        uri = uri.strip().strip("`")
-        if _URI_RE.match(uri):
-            found[step] = uri
+    for step, _template, cell in _ROW_RE.findall(text):
+        match = _ANY_URI_RE.search(cell)
+        if match:
+            found[step] = match.group(0)
     return found
 
 
