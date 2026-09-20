@@ -392,3 +392,43 @@ class TestLedgerLayoutVariance:
         result = C.verify_chain(write(tmp_path, text))
         assert any(r["check"] == "ledger" and r.get("step") == "03"
                    for r in result["rows"])
+
+
+# --- ledger layouts written by hand ---------------------------------------
+#
+# Real ledgers vary. These are the three forms the URI cell has actually taken
+# in study repositories; all three name the same nanopub and all three must
+# parse. The markdown-link form is the one that broke `verify_chain` on
+# annefou/extreme-precipitation-climatedt-replication: it reported "no published
+# URIs found" for a chain whose six steps were all live.
+
+_URI_05 = "https://w3id.org/sciencelive/np/RACgxEzHoCa6VWoEV7tFPLMAhqrwXMvUlzg3KuWwHl0l4"
+
+
+def _ledger(cell: str) -> str:
+    return (
+        "| Step | Template | URI | Published |\n"
+        "|---|---|---|---|\n"
+        f"| 05 | FORRT Replication Outcome | {cell} | 2026-09-07 |\n"
+    )
+
+
+def test_parse_published_accepts_a_bare_uri():
+    assert C.parse_published(_ledger(_URI_05)) == {"05": _URI_05}
+
+
+def test_parse_published_accepts_a_backticked_uri():
+    assert C.parse_published(_ledger(f"`{_URI_05}`")) == {"05": _URI_05}
+
+
+def test_parse_published_accepts_a_markdown_link():
+    cell = f"[`RACgxEzHoCa6…`]({_URI_05})"
+    assert C.parse_published(_ledger(cell)) == {"05": _URI_05}
+
+
+def test_parse_published_still_skips_an_unpublished_row():
+    assert C.parse_published(_ledger("_not yet published_")) == {}
+
+
+def test_parse_published_ignores_a_non_nanopub_url():
+    assert C.parse_published(_ledger("https://example.org/not-a-nanopub")) == {}
