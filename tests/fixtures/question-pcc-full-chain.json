@@ -1,0 +1,370 @@
+{
+  "entry": "https://w3id.org/sciencelive/np/RA2fQHXqmUHhYm46lrCjeXBQbX-h5uFBWo479kkgG5yO8",
+  "paperDoi": "https://doi.org/10.21105/joss.00058",
+  "apexCito": null,
+  "researchSynthesis": null,
+  "chains": [
+    {
+      "id": "RA7zowzpxWmmoRaFkRtc6xLUf395EYHMi0QwYAuQKtBAw",
+      "outcomeUri": "https://w3id.org/sciencelive/np/RA7zowzpxWmmoRaFkRtc6xLUf395EYHMi0QwYAuQKtBAw",
+      "outcomeVerdict": "Validated",
+      "outcomeConfidence": "Moderate",
+      "citoRelations": [
+        "credits"
+      ],
+      "steps": [
+        {
+          "step": "Question",
+          "uri": "https://w3id.org/sciencelive/np/RAEDNajh8Hz_fZbBRgOACKDxWrQYFfDYRks8-xxMEfKt4",
+          "label": "Artificial-light intrusion on the Po Delta protected area from night lights",
+          "text": "How much artificial light at night intrudes on the Po Delta Natura 2000 protected area, when lit settlements are detected from VIIRS satellite night lights using an astronomy source-extraction tool run in Galaxy? This matters because artificial light at night is a documented stressor for the nocturnal birds, insects and bats that wetland refuges like the Po Delta support, and because it tests whether a tool from one discipline (astronomy) can be reused, unchanged, to answer an Earth-observation / biodiversity question.",
+          "framework": "PCC",
+          "components": [
+            {
+              "key": "population",
+              "label": "Population",
+              "text": "The Po Delta \u2014 a Ramsar and Natura 2000 wetland on the Italian Adriatic coast and a key site for migratory and breeding birds \u2014 together with the nocturnal biodiversity it supports."
+            },
+            {
+              "key": "concept",
+              "label": "Concept",
+              "text": "Artificial light at night (light pollution): the presence and spatial extent of artificial light within the protected area, and the proximity of lit human settlements to it."
+            },
+            {
+              "key": "context",
+              "label": "Context",
+              "text": "VIIRS night-lights radiance (NASA Black Marble) over the eastern Po Valley, analysed with the astronomy Source Extractor tool (SExtractor / SEP) running in Galaxy (usegalaxy.eu), overlaid on the EU Natura 2000 protected-area network."
+            }
+          ]
+        },
+        {
+          "step": "AIDA",
+          "uri": "https://w3id.org/sciencelive/np/RAzhINAbh6Mdx4UojSiL1Wa4DHWf1RGiOeHXmOwVQLwhw",
+          "text": "Artificial night-time light is present over approximately 18 percent of the Po Delta Natura 2000 protected area."
+        },
+        {
+          "step": "Claim",
+          "uri": "https://w3id.org/sciencelive/np/RA2fQHXqmUHhYm46lrCjeXBQbX-h5uFBWo479kkgG5yO8",
+          "type": "descriptive_pattern",
+          "label": "Light-pollution intrusion on the Po Delta protected area"
+        },
+        {
+          "step": "Study",
+          "uri": "https://w3id.org/sciencelive/np/RAyA6pt4EhMD7hZBXAwLJtBjsLYaYZQsoafauxS5BXjWw",
+          "scope": "Whether the astronomy source-extraction workflow, applied to satellite night-lights imagery of the Po Delta region, detects lit settlements as discrete sources and yields a measure of the extent of artificial light within the Po Delta Natura 2000 protected area. In scope: settlement detection and a light-extent metric for the Po Delta from a single annual VIIRS composite, plus the proximity of detected settlements to the protected area. Out of scope: temporal trends, species-level biodiversity impacts, comparison against a dedicated Earth-observation settlement product, and sub-pixel or low-radiance light.",
+          "method": "A NASA Black Marble (VNP46A4) annual VIIRS night-lights composite over the eastern Po Valley / Po Delta (tile h19v04) was retrieved via earthaccess, the radiance band extracted and written as a single-channel GeoTIFF (water/dark background, bright settlements). This was run through the Galaxy astronomy \"source-extractor\" tool (astroteam/source_extractor_astro_tool, built on SEP) on usegalaxy.eu via BioBlend, at tool defaults: detection threshold 1.5x the global background RMS, minimum area 5 pixels, deblending (nthresh 32, cont 0.005), background mesh 64x64. The tool returns a source catalog (position, flux, shape), a segmentation map and a sources overlay. The catalog and the radiance field were overlaid on the EU Natura 2000 polygons (EEA): the light-extent metric is the fraction of Po Delta pixels with radiance above 1 nW/cm^2/sr, and nearby settlements are catalog sources within ~10 km of the protected area. A local SEP path reproduces the catalog for credential-free runs.",
+          "deviations": "The Source Extractor tool is normally applied to astronomical sky images (FITS); here the input is a terrestrial satellite night-lights raster (GeoTIFF). Detection parameters are left at the tool defaults; no other changes were made to the tool or workflow."
+        },
+        {
+          "step": "Outcome",
+          "uri": "https://w3id.org/sciencelive/np/RA7zowzpxWmmoRaFkRtc6xLUf395EYHMi0QwYAuQKtBAw",
+          "label": "Source Extractor catalogs 453 settlements; ~18.5% of the Po Delta is lit",
+          "verdict": "Validated",
+          "confidence": "Moderate",
+          "conclusion": "An astronomy source-detection tool \u2014 Source Extractor (SExtractor / SEP) \u2014 run unchanged through Galaxy on VIIRS night lights, detects and catalogs lit settlements just as it catalogs stars, and turns that catalog into a biodiversity-impact measure. The Po Delta Natura 2000 protected area is darker than its surroundings (mean night radiance 0.96 vs 4.11 nW/cm^2/sr region-wide) and so remains a relative dark refuge, but artificial light already covers about 18.5 percent of its area and 145 detected settlements lie within roughly 10 km of it \u2014 a measurable encroachment of light pollution on a nocturnal-biodiversity wetland. This confirms the cross-discipline transfer: a FAIR, well-described Galaxy tool from astronomy does useful Earth-observation / biodiversity work without modification.",
+          "evidence": "Po Delta / eastern Po Valley, NASA Black Marble VNP46A4 (VIIRS) 2021 annual composite (tile h19v04), run on usegalaxy.eu. Source Extractor cataloged 453 settlements region-wide (position, flux, size). Inside Natura 2000 sites the mean radiance is 1.34; inside the Po Delta it is 0.96, versus 4.11 region-wide. 18.5 percent of the Po Delta area exceeds 1 nW/cm^2/sr (lit); 145 cataloged settlements fall within ~10 km of the Po Delta. The Galaxy run and a local SEP reimplementation give the same catalog (453 settlements both ways). Provenance: results/galaxy_provenance.json (Galaxy history + parameters); figures/main_result.png.\n\nGithub: https://github.com/annefou/fiesta-galaxy-sourceextractor-eo",
+          "limitations": "This is a single annual snapshot, not a temporal trend, over one region. Night-lights radiance is a proxy for human presence and artificial-light exposure, not a direct biodiversity measurement, and \"lit\" uses a single 1 nW/cm^2/sr threshold. In the most intensely lit parts of the Po plain the background is no longer dark, so source detection there is less clean \u2014 the method works best at the refuge/city edge, like the Po Delta. Agreement between the Galaxy and local runs demonstrates reproducibility, not independent external validation, since both use the same SEP algorithm.",
+          "repository": "https://doi.org/10.5281/zenodo.20784962"
+        },
+        {
+          "step": "CiTO",
+          "uri": "https://w3id.org/sciencelive/np/RAHqfGVvNBhwPzjKGWjr1GS-63nziwc1Jqt0cm9EEMgJE",
+          "relations": [
+            "credits"
+          ],
+          "targets": [
+            "https://doi.org/10.21105/joss.00058"
+          ]
+        }
+      ]
+    }
+  ],
+  "nodeCount": 7,
+  "edgeCount": 10,
+  "sparqlEndpoint": "https://query.knowledgepixels.com/repo/full",
+  "nodes": [
+    {
+      "uri": "https://w3id.org/sciencelive/np/RA2fQHXqmUHhYm46lrCjeXBQbX-h5uFBWo479kkgG5yO8",
+      "stepKind": "claim",
+      "stepType": "Declaring an original claim according to FORRT",
+      "templateUri": "https://w3id.org/np/RAZWyM8D16ya3S1zhCvrG1f0iSpd9-8onVWp0FTvvX7LQ",
+      "label": "Light-pollution intrusion on the Po Delta protected area",
+      "date": "2026-06-21T14:07:19.327Z",
+      "creators": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "creatorNames": [
+        "Anne Fouilloux"
+      ],
+      "authorsOrcid": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "plainTextExcerpts": [
+        "Light-pollution intrusion on the Po Delta protected area",
+        "Anne Fouilloux"
+      ],
+      "githubUrls": [
+        "https://github.com/annefou/fiesta-galaxy-sourceextractor-eo"
+      ],
+      "claim": {
+        "claimType": "descriptive_pattern",
+        "aidaStatement": "http://purl.org/aida/Artificial%20night-time%20light%20is%20present%20over%20approximately%2018%20percent%20of%20the%20Po%20Delta%20Natura%202000%20protected%20area."
+      }
+    },
+    {
+      "uri": "https://w3id.org/sciencelive/np/RAyA6pt4EhMD7hZBXAwLJtBjsLYaYZQsoafauxS5BXjWw",
+      "stepKind": "study",
+      "stepType": "Declaring a replication study design according to FORRT",
+      "templateUri": "https://w3id.org/np/RAuLEjPp-4dTvPwMkfHggTto1CgjIftiGRAgHlyeEonjQ",
+      "label": "Astronomy Source Extractor applied to satellite night lights over the Po Delta",
+      "date": "2026-06-21T14:12:06.730Z",
+      "creators": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "creatorNames": [
+        "Anne Fouilloux"
+      ],
+      "authorsOrcid": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "plainTextExcerpts": [
+        "A NASA Black Marble (VNP46A4) annual VIIRS night-lights composite over the eastern Po Valley / Po Delta (tile h19v04) was retrieved via earthaccess, the radiance band extracted and written as a single-channel GeoTIFF (water/dark background, bright settlements). This was run through the Galaxy astronomy \"source-extractor\" tool (astroteam/source_extractor_astro_tool, built on SEP) on usegalaxy.eu via BioBlend, at tool defaults: detection threshold 1.5x the global background RMS, minimum area 5 pixels, deblending (nthresh 32, cont 0.005), background mesh 64x64. The tool returns a source catalog (position, flux, shape), a segmentation map and a sources overlay. The catalog and the radiance field were overlaid on the EU Natura 2000 polygons (EEA): the light-extent metric is the fraction of Po Delta pixels with radiance above 1 nW/cm^2/sr, and nearby settlements are catalog sources within ~10 km of the protected area. A local SEP path reproduces the catalog for credential-free runs.",
+        "Whether the astronomy source-extraction workflow, applied to satellite night-lights imagery of the Po Delta region, detects lit settlements as discrete sources and yields a measure of the extent of artificial light within the Po Delta Natura 2000 protected area. In scope: settlement detection and a light-extent metric for the Po Delta from a single annual VIIRS composite, plus the proximity of detected settlements to the protected area. Out of scope: temporal trends, species-level biodiversity impacts, comparison against a dedicated Earth-observation settlement product, and sub-pixel or low-radiance light.",
+        "The Source Extractor tool is normally applied to astronomical sky images (FITS); here the input is a terrestrial satellite night-lights raster (GeoTIFF). Detection parameters are left at the tool defaults; no other changes were made to the tool or workflow.",
+        "Astronomy Source Extractor applied to satellite night lights over the Po Delta"
+      ],
+      "githubUrls": [],
+      "study": {
+        "scope": "Whether the astronomy source-extraction workflow, applied to satellite night-lights imagery of the Po Delta region, detects lit settlements as discrete sources and yields a measure of the extent of artificial light within the Po Delta Natura 2000 protected area. In scope: settlement detection and a light-extent metric for the Po Delta from a single annual VIIRS composite, plus the proximity of detected settlements to the protected area. Out of scope: temporal trends, species-level biodiversity impacts, comparison against a dedicated Earth-observation settlement product, and sub-pixel or low-radiance light.",
+        "methodology": "A NASA Black Marble (VNP46A4) annual VIIRS night-lights composite over the eastern Po Valley / Po Delta (tile h19v04) was retrieved via earthaccess, the radiance band extracted and written as a single-channel GeoTIFF (water/dark background, bright settlements). This was run through the Galaxy astronomy \"source-extractor\" tool (astroteam/source_extractor_astro_tool, built on SEP) on usegalaxy.eu via BioBlend, at tool defaults: detection threshold 1.5x the global background RMS, minimum area 5 pixels, deblending (nthresh 32, cont 0.005), background mesh 64x64. The tool returns a source catalog (position, flux, shape), a segmentation map and a sources overlay. The catalog and the radiance field were overlaid on the EU Natura 2000 polygons (EEA): the light-extent metric is the fraction of Po Delta pixels with radiance above 1 nW/cm^2/sr, and nearby settlements are catalog sources within ~10 km of the protected area. A local SEP path reproduces the catalog for credential-free runs.",
+        "deviations": "The Source Extractor tool is normally applied to astronomical sky images (FITS); here the input is a terrestrial satellite night-lights raster (GeoTIFF). Detection parameters are left at the tool defaults; no other changes were made to the tool or workflow.",
+        "discipline": "http://www.wikidata.org/entity/Q199687",
+        "claimUri": "https://w3id.org/sciencelive/np/RA2fQHXqmUHhYm46lrCjeXBQbX-h5uFBWo479kkgG5yO8/po-delta-light-intrusion"
+      }
+    },
+    {
+      "uri": "https://w3id.org/sciencelive/np/RAzhINAbh6Mdx4UojSiL1Wa4DHWf1RGiOeHXmOwVQLwhw",
+      "stepKind": "aida",
+      "stepType": "Expressing a statement about research as an AIDA sentence",
+      "templateUri": "https://w3id.org/np/RALmXhDw3rHcMveTgbv8VtWxijUHwnSqhCmtJFIPKWVaA",
+      "label": "AIDA sentence: Artificial night-time light is present over approximately 18 percent of the Po Delta Natura 2000 protected area.",
+      "date": "2026-06-21T14:05:07.804Z",
+      "creators": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "creatorNames": [
+        "Anne Fouilloux"
+      ],
+      "authorsOrcid": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "plainTextExcerpts": [
+        "AIDA sentence: Artificial night-time light is present over approximately 18 percent of the Po Delta Natura 2000 protected area.",
+        "Anne Fouilloux"
+      ],
+      "githubUrls": [],
+      "aida": {
+        "sentence": "Artificial night-time light is present over approximately 18 percent of the Po Delta Natura 2000 protected area."
+      }
+    },
+    {
+      "uri": "https://w3id.org/sciencelive/np/RA7zowzpxWmmoRaFkRtc6xLUf395EYHMi0QwYAuQKtBAw",
+      "stepKind": "outcome",
+      "stepType": "Declaring a replication study outcome according to FORRT",
+      "templateUri": "https://w3id.org/np/RA2zljn0Nw9SadppOyxZoh-_Rxosslrq-vYG-p9SttnJE",
+      "label": "Source Extractor catalogs 453 settlements; ~18.5% of the Po Delta is lit",
+      "date": "2026-06-21T14:14:57.890Z",
+      "creators": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "creatorNames": [
+        "Anne Fouilloux"
+      ],
+      "authorsOrcid": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "plainTextExcerpts": [
+        "An astronomy source-detection tool \u2014 Source Extractor (SExtractor / SEP) \u2014 run unchanged through Galaxy on VIIRS night lights, detects and catalogs lit settlements just as it catalogs stars, and turns that catalog into a biodiversity-impact measure. The Po Delta Natura 2000 protected area is darker than its surroundings (mean night radiance 0.96 vs 4.11 nW/cm^2/sr region-wide) and so remains a relative dark refuge, but artificial light already covers about 18.5 percent of its area and 145 detected settlements lie within roughly 10 km of it \u2014 a measurable encroachment of light pollution on a nocturnal-biodiversity wetland. This confirms the cross-discipline transfer: a FAIR, well-described Galaxy tool from astronomy does useful Earth-observation / biodiversity work without modification.",
+        "Po Delta / eastern Po Valley, NASA Black Marble VNP46A4 (VIIRS) 2021 annual composite (tile h19v04), run on usegalaxy.eu. Source Extractor cataloged 453 settlements region-wide (position, flux, size). Inside Natura 2000 sites the mean radiance is 1.34; inside the Po Delta it is 0.96, versus 4.11 region-wide. 18.5 percent of the Po Delta area exceeds 1 nW/cm^2/sr (lit); 145 cataloged settlements fall within ~10 km of the Po Delta. The Galaxy run and a local SEP reimplementation give the same catalog (453 settlements both ways). Provenance: results/galaxy_provenance.json (Galaxy history + parameters); figures/main_result.png.\n\nGithub: https://github.com/annefou/fiesta-galaxy-sourceextractor-eo",
+        "This is a single annual snapshot, not a temporal trend, over one region. Night-lights radiance is a proxy for human presence and artificial-light exposure, not a direct biodiversity measurement, and \"lit\" uses a single 1 nW/cm^2/sr threshold. In the most intensely lit parts of the Po plain the background is no longer dark, so source detection there is less clean \u2014 the method works best at the refuge/city edge, like the Po Delta. Agreement between the Galaxy and local runs demonstrates reproducibility, not independent external validation, since both use the same SEP algorithm.",
+        "Source Extractor catalogs 453 settlements; ~18.5% of the Po Delta is lit"
+      ],
+      "githubUrls": [
+        "https://github.com/annefou/fiesta-galaxy-sourceextractor-eo"
+      ],
+      "outcome": {
+        "conclusion": "An astronomy source-detection tool \u2014 Source Extractor (SExtractor / SEP) \u2014 run unchanged through Galaxy on VIIRS night lights, detects and catalogs lit settlements just as it catalogs stars, and turns that catalog into a biodiversity-impact measure. The Po Delta Natura 2000 protected area is darker than its surroundings (mean night radiance 0.96 vs 4.11 nW/cm^2/sr region-wide) and so remains a relative dark refuge, but artificial light already covers about 18.5 percent of its area and 145 detected settlements lie within roughly 10 km of it \u2014 a measurable encroachment of light pollution on a nocturnal-biodiversity wetland. This confirms the cross-discipline transfer: a FAIR, well-described Galaxy tool from astronomy does useful Earth-observation / biodiversity work without modification.",
+        "evidence": "Po Delta / eastern Po Valley, NASA Black Marble VNP46A4 (VIIRS) 2021 annual composite (tile h19v04), run on usegalaxy.eu. Source Extractor cataloged 453 settlements region-wide (position, flux, size). Inside Natura 2000 sites the mean radiance is 1.34; inside the Po Delta it is 0.96, versus 4.11 region-wide. 18.5 percent of the Po Delta area exceeds 1 nW/cm^2/sr (lit); 145 cataloged settlements fall within ~10 km of the Po Delta. The Galaxy run and a local SEP reimplementation give the same catalog (453 settlements both ways). Provenance: results/galaxy_provenance.json (Galaxy history + parameters); figures/main_result.png.\n\nGithub: https://github.com/annefou/fiesta-galaxy-sourceextractor-eo",
+        "limitations": "This is a single annual snapshot, not a temporal trend, over one region. Night-lights radiance is a proxy for human presence and artificial-light exposure, not a direct biodiversity measurement, and \"lit\" uses a single 1 nW/cm^2/sr threshold. In the most intensely lit parts of the Po plain the background is no longer dark, so source detection there is less clean \u2014 the method works best at the refuge/city edge, like the Po Delta. Agreement between the Galaxy and local runs demonstrates reproducibility, not independent external validation, since both use the same SEP algorithm.",
+        "validationStatus": "Validated",
+        "confidenceLevel": "Moderate",
+        "repository": "https://doi.org/10.5281/zenodo.20784962",
+        "studyUri": "https://w3id.org/sciencelive/np/RAyA6pt4EhMD7hZBXAwLJtBjsLYaYZQsoafauxS5BXjWw/po-delta-sourceextractor-study",
+        "endDate": "2026-06-20"
+      }
+    },
+    {
+      "uri": "https://w3id.org/sciencelive/np/RAEDNajh8Hz_fZbBRgOACKDxWrQYFfDYRks8-xxMEfKt4",
+      "stepKind": "question",
+      "stepType": "Defining a PCC-based research question",
+      "templateUri": "https://w3id.org/np/RAmR-xqMgOq3oTJmOVDQFL2p5usID6zqRapizHy0UJb04",
+      "label": "Artificial-light intrusion on the Po Delta protected area from night lights",
+      "date": "2026-06-21T14:02:34.224Z",
+      "creators": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "creatorNames": [
+        "Anne Fouilloux"
+      ],
+      "authorsOrcid": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "plainTextExcerpts": [
+        "How much artificial light at night intrudes on the Po Delta Natura 2000 protected area, when lit settlements are detected from VIIRS satellite night lights using an astronomy source-extraction tool run in Galaxy? This matters because artificial light at night is a documented stressor for the nocturnal birds, insects and bats that wetland refuges like the Po Delta support, and because it tests whether a tool from one discipline (astronomy) can be reused, unchanged, to answer an Earth-observation / biodiversity question.",
+        "VIIRS night-lights radiance (NASA Black Marble) over the eastern Po Valley, analysed with the astronomy Source Extractor tool (SExtractor / SEP) running in Galaxy (usegalaxy.eu), overlaid on the EU Natura 2000 protected-area network.",
+        "The Po Delta \u2014 a Ramsar and Natura 2000 wetland on the Italian Adriatic coast and a key site for migratory and breeding birds \u2014 together with the nocturnal biodiversity it supports.",
+        "Artificial light at night (light pollution): the presence and spatial extent of artificial light within the protected area, and the proximity of lit human settlements to it."
+      ],
+      "githubUrls": [],
+      "question": {
+        "framework": "PCC",
+        "label": "Artificial-light intrusion on the Po Delta protected area from night lights",
+        "question": "How much artificial light at night intrudes on the Po Delta Natura 2000 protected area, when lit settlements are detected from VIIRS satellite night lights using an astronomy source-extraction tool run in Galaxy? This matters because artificial light at night is a documented stressor for the nocturnal birds, insects and bats that wetland refuges like the Po Delta support, and because it tests whether a tool from one discipline (astronomy) can be reused, unchanged, to answer an Earth-observation / biodiversity question.",
+        "components": [
+          {
+            "key": "population",
+            "label": "Population",
+            "text": "The Po Delta \u2014 a Ramsar and Natura 2000 wetland on the Italian Adriatic coast and a key site for migratory and breeding birds \u2014 together with the nocturnal biodiversity it supports."
+          },
+          {
+            "key": "concept",
+            "label": "Concept",
+            "text": "Artificial light at night (light pollution): the presence and spatial extent of artificial light within the protected area, and the proximity of lit human settlements to it."
+          },
+          {
+            "key": "context",
+            "label": "Context",
+            "text": "VIIRS night-lights radiance (NASA Black Marble) over the eastern Po Valley, analysed with the astronomy Source Extractor tool (SExtractor / SEP) running in Galaxy (usegalaxy.eu), overlaid on the EU Natura 2000 protected-area network."
+          }
+        ]
+      }
+    },
+    {
+      "uri": "https://w3id.org/sciencelive/np/RAHqfGVvNBhwPzjKGWjr1GS-63nziwc1Jqt0cm9EEMgJE",
+      "stepKind": "cito",
+      "stepType": "Declare citations with CiTO",
+      "templateUri": "https://w3id.org/np/RA43F9EoOuzF0xoNUnCMNyFsfIqlsuWDdPHCnN0wCdCAw",
+      "label": "Citations for: RA7zowzpxWmmoRaFkRtc6xLUf395EYHMi0QwYAuQKtBAw",
+      "date": "2026-06-21T14:18:52.925Z",
+      "creators": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "creatorNames": [
+        "Anne Fouilloux"
+      ],
+      "authorsOrcid": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "plainTextExcerpts": [
+        "Citations for: RA7zowzpxWmmoRaFkRtc6xLUf395EYHMi0QwYAuQKtBAw",
+        "Anne Fouilloux"
+      ],
+      "githubUrls": [],
+      "cito": {
+        "relations": [
+          "credits"
+        ],
+        "citedTargets": [
+          "https://doi.org/10.21105/joss.00058"
+        ],
+        "citingEntity": "https://w3id.org/sciencelive/np/RA7zowzpxWmmoRaFkRtc6xLUf395EYHMi0QwYAuQKtBAw"
+      }
+    },
+    {
+      "uri": "https://w3id.org/sciencelive/np/RA7KdUpnRo8yQAOS1ne3L06a6jVNZvRMRX2YIHpSlm5JY",
+      "stepKind": "research-software",
+      "stepType": "Describing research software at summary level - simple",
+      "templateUri": "https://w3id.org/np/RABBzVTxosLGT4YBCfdfNd6LyuOOTe2EVOTtWJMyOoZHk",
+      "label": "Software: FIESTA \u2014 Galaxy Source-Extractor pipeline for night-lights settlement detection and light-pollution biodiversity overlay",
+      "date": "2026-06-21T14:27:12.098Z",
+      "creators": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "creatorNames": [
+        "Anne Fouilloux"
+      ],
+      "authorsOrcid": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "plainTextExcerpts": [
+        "Software: FIESTA \u2014 Galaxy Source-Extractor pipeline for night-lights settlement detection and light-pollution biodiversity overlay",
+        "FIESTA \u2014 Galaxy Source-Extractor pipeline for night-lights settlement detection and light-pollution biodiversity overlay",
+        "Anne Fouilloux"
+      ],
+      "githubUrls": [],
+      "researchSoftware": {
+        "repository": "",
+        "zenodoDoi": "https://doi.org/10.5281/zenodo.20784962",
+        "supportsTargets": [
+          "https://doi.org/10.21105/joss.00058"
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "https://w3id.org/sciencelive/np/RA2fQHXqmUHhYm46lrCjeXBQbX-h5uFBWo479kkgG5yO8",
+      "target": "https://w3id.org/sciencelive/np/RAyA6pt4EhMD7hZBXAwLJtBjsLYaYZQsoafauxS5BXjWw",
+      "relation": "refersTo"
+    },
+    {
+      "source": "https://w3id.org/sciencelive/np/RA2fQHXqmUHhYm46lrCjeXBQbX-h5uFBWo479kkgG5yO8",
+      "target": "https://w3id.org/sciencelive/np/RAzhINAbh6Mdx4UojSiL1Wa4DHWf1RGiOeHXmOwVQLwhw",
+      "relation": "refersTo"
+    },
+    {
+      "source": "https://w3id.org/sciencelive/np/RAyA6pt4EhMD7hZBXAwLJtBjsLYaYZQsoafauxS5BXjWw",
+      "target": "https://w3id.org/sciencelive/np/RA7zowzpxWmmoRaFkRtc6xLUf395EYHMi0QwYAuQKtBAw",
+      "relation": "refersTo"
+    },
+    {
+      "source": "https://w3id.org/sciencelive/np/RAyA6pt4EhMD7hZBXAwLJtBjsLYaYZQsoafauxS5BXjWw",
+      "target": "https://w3id.org/sciencelive/np/RA2fQHXqmUHhYm46lrCjeXBQbX-h5uFBWo479kkgG5yO8",
+      "relation": "refersTo"
+    },
+    {
+      "source": "https://w3id.org/sciencelive/np/RAzhINAbh6Mdx4UojSiL1Wa4DHWf1RGiOeHXmOwVQLwhw",
+      "target": "https://w3id.org/sciencelive/np/RAEDNajh8Hz_fZbBRgOACKDxWrQYFfDYRks8-xxMEfKt4",
+      "relation": "refersTo"
+    },
+    {
+      "source": "https://w3id.org/sciencelive/np/RA7zowzpxWmmoRaFkRtc6xLUf395EYHMi0QwYAuQKtBAw",
+      "target": "https://w3id.org/sciencelive/np/RAHqfGVvNBhwPzjKGWjr1GS-63nziwc1Jqt0cm9EEMgJE",
+      "relation": "refersTo"
+    },
+    {
+      "source": "https://w3id.org/sciencelive/np/RA7zowzpxWmmoRaFkRtc6xLUf395EYHMi0QwYAuQKtBAw",
+      "target": "https://w3id.org/sciencelive/np/RAyA6pt4EhMD7hZBXAwLJtBjsLYaYZQsoafauxS5BXjWw",
+      "relation": "refersTo"
+    },
+    {
+      "source": "https://w3id.org/sciencelive/np/RAHqfGVvNBhwPzjKGWjr1GS-63nziwc1Jqt0cm9EEMgJE",
+      "target": "https://w3id.org/sciencelive/np/RA7KdUpnRo8yQAOS1ne3L06a6jVNZvRMRX2YIHpSlm5JY",
+      "relation": "refersTo"
+    },
+    {
+      "source": "https://w3id.org/sciencelive/np/RAHqfGVvNBhwPzjKGWjr1GS-63nziwc1Jqt0cm9EEMgJE",
+      "target": "https://w3id.org/sciencelive/np/RA7zowzpxWmmoRaFkRtc6xLUf395EYHMi0QwYAuQKtBAw",
+      "relation": "refersTo"
+    },
+    {
+      "source": "https://w3id.org/sciencelive/np/RA7KdUpnRo8yQAOS1ne3L06a6jVNZvRMRX2YIHpSlm5JY",
+      "target": "https://w3id.org/sciencelive/np/RAHqfGVvNBhwPzjKGWjr1GS-63nziwc1Jqt0cm9EEMgJE",
+      "relation": "refersTo"
+    }
+  ],
+  "externalCitations": [
+    "https://doi.org/10.21105/joss.00058",
+    "https://doi.org/10.5281/zenodo.20784962"
+  ]
+}

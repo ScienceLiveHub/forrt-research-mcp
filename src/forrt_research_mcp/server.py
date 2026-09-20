@@ -30,6 +30,7 @@ from .constellation import fetch as _fetch
 from .constellation import prior_work as _prior_work
 from .constellation import summary as _summary
 from .chain import verify_chain as _verify_chain
+from .chain_draft import validate_chain_draft as _validate_chain_draft
 from .drafts import validate_draft as _validate_draft
 from .drafts import validate_drafts as _validate_drafts
 from .grounding import GroundingError
@@ -366,6 +367,42 @@ def verify_chain(published_path: str, repo_url: str = "", mode: str = "auto") ->
     """
     try:
         return {"ok": True, **_verify_chain(published_path, repo_url, mode)}
+    except ApiError as e:
+        return _fail(e)
+
+
+@mcp.tool()
+def validate_chain_draft(path: str, live: bool = True) -> dict:
+    """Check `nanopubs/chain-draft.json` before handing it to the chain wizard.
+
+    Run this at the end of Phase 5b, after `pixi run build-chain-draft` and
+    BEFORE pushing the file and opening the wizard URL. `readyForWizard` is true
+    only when nothing came back as an error.
+
+    This file — not the markdown drafts — is what the wizard pre-fills each step
+    from, and therefore what a human reviews and signs. `validate_draft` checks
+    the authoring input; this checks the artifact.
+
+    What it catches that reading the file cannot:
+      - a **superseded `template_uri`**, which is invisible in the JSON but makes
+        the wizard pre-fill the old form. Re-run build-chain-draft to fix;
+      - a `prefill` key that is neither a template field nor a known platform
+        form-field — the wizard silently drops it;
+      - a complex field in the wrong shape: `06_citation.st02` must be
+        `[{cites, cited}]` with at least one entry, and
+        `04_study.disciplineSelection` is a single object, NOT an array;
+      - a required field that is neither prefilled nor carried forward;
+      - values violating the template's own regex (the Quote's 500-character cap
+        lives there), an invalid vocabulary term, a malformed date, an
+        unresolved `{{TOKEN}}`, or a DOI that does not resolve;
+      - a `carry_forward` edge that runs backwards through the chain.
+
+    Fields the wizard fills itself are exempt, not reported missing: `02_aida`
+    has no `project`, `03_claim` no `aida`, `04_study` no `claim`, because each
+    is carried forward from the step published before it.
+    """
+    try:
+        return {"ok": True, **_validate_chain_draft(path, live=live)}
     except ApiError as e:
         return _fail(e)
 

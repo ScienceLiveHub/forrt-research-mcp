@@ -1,0 +1,110 @@
+{
+ "search": {
+  "search": [
+   {
+    "id": "Q56321065",
+    "label": "marine heatwave",
+    "description": "extended period of anomalously warm water in a region of the oceans"
+   },
+   {
+    "id": "Q141209520",
+    "label": "Marine heatwaves in Aotearoa New Zealand's coastal and shelf seas: Identification, characteristics and drivers",
+    "description": "2025 doctoral thesis by Felix Cameron Cook at University of Otago"
+   },
+   {
+    "id": "Q135956936",
+    "label": "Marine Heatwave Analysis and Prediction Using Deep Learning: A Case Study Around Ireland",
+    "description": ""
+   },
+   {
+    "id": "Q57173235",
+    "label": "Marine heatwaves under global warming",
+    "description": "scientific article published in Nature"
+   },
+   {
+    "id": "Q62580423",
+    "label": "Marine heatwaves threaten global biodiversity and the provision of ecosystem services",
+    "description": "scholarly article by Dan A. Smale et al published 4 March 2019 in Nature Climate Change"
+   }
+  ]
+ },
+ "claims": {
+  "entities": {
+   "Q56321065": {
+    "claims": {
+     "P279": [
+      {
+       "mainsnak": {
+        "datavalue": {
+         "value": {
+          "id": "Q215864"
+         }
+        }
+       }
+      }
+     ]
+    }
+   },
+   "Q141209520": {
+    "claims": {
+     "P31": [
+      {
+       "mainsnak": {
+        "datavalue": {
+         "value": {
+          "id": "Q187685"
+         }
+        }
+       }
+      }
+     ]
+    }
+   },
+   "Q135956936": {
+    "claims": {
+     "P31": [
+      {
+       "mainsnak": {
+        "datavalue": {
+         "value": {
+          "id": "Q87167"
+         }
+        }
+       }
+      }
+     ]
+    }
+   },
+   "Q57173235": {
+    "claims": {
+     "P31": [
+      {
+       "mainsnak": {
+        "datavalue": {
+         "value": {
+          "id": "Q13442814"
+         }
+        }
+       }
+      }
+     ]
+    }
+   },
+   "Q62580423": {
+    "claims": {
+     "P31": [
+      {
+       "mainsnak": {
+        "datavalue": {
+         "value": {
+          "id": "Q13442814"
+         }
+        }
+       }
+      }
+     ]
+    }
+   }
+  }
+ }
+}

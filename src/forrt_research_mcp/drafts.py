@@ -26,7 +26,7 @@ from pathlib import Path
 
 from .api import ApiError
 from .grounding import GroundingError, resolve_doi, wikidata_lookup
-from .templates import VOCABULARIES, template_fields, vocabulary
+from .templates import VOCABULARIES, matches_term, template_fields, vocabulary
 
 # `<!-- field: id -->` through to the next marker (or end of file).
 _FIELD_RE = re.compile(
@@ -62,30 +62,141 @@ def _finding(severity: str, check: str, message: str, **extra) -> dict:
     return {"severity": severity, "check": check, "message": message, **extra}
 
 
-def parse_draft(text: str, spec: dict | None = None) -> dict[str, dict]:
+_HEADING_RE = re.compile(r"^###\s+(.*?)\s*$", re.M)
+
+# Fields whose draft heading does NOT contain the template's label, so
+# label-matching alone fails. Mirrors DRAFT_HEADING_ALIAS in the template's
+# `scripts/build_chain_draft.py` — the two must agree, because that script is
+# what reads a draft into the published artefact.
+#
+# Several exist because the upstream template label is not something a person
+# can act on: `08_synthesis.synthesis` is labelled "short URI suffix for OUTCOME
+# ID" (copy-paste from the Outcome template), and `07_research_software.date`
+# has an EMPTY label, so nothing could ever match it.
+_HEADING_ALIAS: dict[tuple[str, str], str] = {
+    ("01_quote", "paper"): "Cited DOI",
+    ("01_pico", "type"): "Question Type",
+    ("02_aida", "aida"): "AIDA sentence",
+    ("02_aida", "topic"): "Select related topics/tags",
+    ("02_aida", "project"): "Relates to this nanopublication",
+    ("02_aida", "dataset"): "Supported by datasets",
+    ("02_aida", "publication"): "Supported by other publications",
+    ("03_claim", "aida"): "Search for an AIDA sentence",
+    ("04_study", "keyword"): "Search keywords (Wikidata)",
+    ("04_study", "discipline"): "Search discipline (Wikidata)",
+    ("06_citation", "work"): "Identifier for the citing creative work",
+    ("07_research_software", "title"): "Software Title",
+    ("07_research_software", "repository"): "Repository URL",
+    ("07_research_software", "researchoutput"): "Related Publications",
+    ("07_research_software", "dataset"): "Related Datasets",
+    ("08_synthesis", "synthesis"): "Short URI suffix for synthesis ID",
+    ("08_synthesis", "conditions"): "Conditions under which the synthesis applies",
+    ("08_synthesis", "source"): "Supporting sources",
+    ("08_synthesis", "date"): "Completion date",
+}
+_STRIP_PREFIXES = (
+    "choose ", "select ", "describe ", "search for ", "plain-text ",
+    "short uri suffix for ", "short uri suffix as ", "label/name of ",
+    "the ", "your ",
+)
+
+
+def normalise_heading(text: str) -> str:
+    """Canonical form of a draft heading or a template field label.
+
+    Mirrors `_norm` in the template's `scripts/build_chain_draft.py`. The two
+    MUST agree: that script is what turns a draft into the published artefact,
+    so a validator matching headings differently would pass drafts the builder
+    silently drops, or reject ones it reads fine.
+    """
+    s = re.sub(r"\([^)]*\)", "", (text or "").lower())   # drop "(text input, required)"
+    s = re.sub(r"[^a-z0-9 ]+", " ", s)
+    s = re.sub(r"\s+", " ", s).strip()
+    changed = True
+    while changed:
+        changed = False
+        for prefix in _STRIP_PREFIXES:
+            if s.startswith(prefix):
+                s = s[len(prefix):]
+                changed = True
+    return s.strip()
+
+
+def _sections_by_heading(text: str) -> dict[str, str]:
+    """Normalised `###` heading -> the body beneath it, up to the next heading."""
+    out: dict[str, str] = {}
+    positions = [(m.start(), m.end(), m.group(1)) for m in _HEADING_RE.finditer(text)]
+    for i, (_start, end, heading) in enumerate(positions):
+        stop = positions[i + 1][0] if i + 1 < len(positions) else len(text)
+        out[normalise_heading(heading)] = text[end:stop]
+    return out
+
+
+def _value_from_body(body: str, prefers_choice: bool) -> tuple[str, str]:
+    """(value, how it was read) for one field's section body."""
+    if prefers_choice:
+        ticked = _TICKED_RE.search(body)
+        if ticked:
+            return ticked.group(1).strip(), "checkbox"
+    fenced = _FENCE_RE.search(body)
+    if fenced:
+        return fenced.group(1).strip(), "fenced-block"
+    ticked = _TICKED_RE.search(body)
+    if ticked:
+        return ticked.group(1).strip(), "checkbox"
+    return "", "none"
+
+
+def parse_draft(text: str, spec: dict | None = None, step: str = "") -> dict[str, dict]:
     """Field id -> {value, source}.
 
-    Real drafts use two conventions: a fenced block for free text, and a ticked
-    `- [x]` checkbox for a restricted choice. Which to read is decided by the
-    field's kind on the template, not by which appears first — a `<!-- field -->`
-    marker runs to the next marker, so it can enclose an unrelated checkbox
-    (the Quote template's DOI field encloses the whole-text/start-end radio),
-    and a choice field often carries a fenced block of rationale as well.
+    Drafts identify a field by a `###` heading matching the template field's
+    LABEL — that is what `build_chain_draft.py` reads, so it is authoritative.
+    Some drafts additionally carry `<!-- field: id -->` markers; those are a
+    convenience, not the contract, and a whole corpus of real drafts has none
+    (the fiesta-galaxy studies). A validator that required them rejected 17
+    perfectly good drafts.
+
+    Within a section, a restricted choice is a ticked `- [x]` box and free text
+    is the first fenced block. Which to read is decided by the field's kind on
+    the template, not by which appears first: a section can enclose an unrelated
+    checkbox (the Quote template's DOI field encloses the whole-text/start-end
+    radio), and a choice field often carries a fenced block of rationale too.
     """
-    kinds = {f["id"]: f.get("kind", "") for f in (spec or {}).get("fields", [])}
+    fields_spec = (spec or {}).get("fields", [])
+    kinds = {f["id"]: f.get("kind", "") for f in fields_spec}
+    sections = _sections_by_heading(text)
 
     fields: dict[str, dict] = {}
-    for fid, body in _FIELD_RE.findall(text):
-        prefers_choice = kinds.get(fid) in ("restricted_choice", "guided_choice")
-        ticked = _TICKED_RE.search(body) if prefers_choice or fid not in kinds else None
-        if ticked:
-            fields[fid] = {"value": ticked.group(1).strip(), "source": "checkbox"}
+
+    # 1. Headings matched to template field labels — the builder's own rule.
+    for field in fields_spec:
+        fid = field["id"]
+        alias = _HEADING_ALIAS.get((step, fid))
+        key = normalise_heading(alias or field.get("label", ""))
+        body = sections.get(key)
+        if body is None and alias:
+            key = normalise_heading(field.get("label", ""))
+            body = sections.get(key)
+        if body is None:  # loose containment, for hand-authored headings that drift
+            body = next((v for k, v in sections.items()
+                         if k and key and (k in key or key in k)), None)
+        if body is None:
             continue
-        fenced = _FENCE_RE.search(body)
-        fields[fid] = {
-            "value": fenced.group(1).strip() if fenced else "",
-            "source": "fenced-block" if fenced else "none",
-        }
+        value, source = _value_from_body(
+            body, kinds.get(fid) in ("restricted_choice", "guided_choice"))
+        fields[fid] = {"value": value, "source": source}
+
+    # 2. Explicit markers, where present, fill anything the labels missed and
+    #    name fields whose heading did not match.
+    for fid, body in _FIELD_RE.findall(text):
+        if fields.get(fid, {}).get("value"):
+            continue
+        value, source = _value_from_body(
+            body, kinds.get(fid) in ("restricted_choice", "guided_choice"))
+        if value or fid not in fields:
+            fields[fid] = {"value": value, "source": source}
+
     return fields
 
 
@@ -230,11 +341,8 @@ def _check_vocabularies(fields: dict, step: str, *, live: bool) -> list[dict]:
                 field=field_id, vocabulary=name))
             continue
 
-        probe = value.split("\n")[0].strip().strip("`*_ ").lower()
-        match = next((a for a in allowed
-                      if probe == (a["label"] or "").lower()
-                      or (a["label"] or "").lower().startswith(probe)
-                      or probe in a["uri"].lower()), None)
+        probe = value.split("\n")[0].strip().strip("`*_ ")
+        match = next((a for a in allowed if matches_term(probe, a)), None)
         if match:
             out.append(_finding(
                 "info", "vocabulary",
@@ -312,16 +420,18 @@ def validate_draft(path: str, step: str = "", *, live: bool = True) -> dict:
     resolved = _step_for(target, step)
     text = target.read_text()
     spec = template_fields(resolved, live=live)
-    fields = parse_draft(text, spec)
+    fields = parse_draft(text, spec, resolved)
 
     if not fields:
         return {
             "draft": str(target), "step": resolved, "publishable": False,
             "findings": [_finding(
                 "error", "parse",
-                "no `<!-- field: … -->` markers found — this checker reads the "
-                "draft skeletons produced by the template; a free-form file "
-                "cannot be checked")],
+                "no fields found — a draft identifies each field by a `###` "
+                "heading matching the template field's label (optionally plus a "
+                "`<!-- field: id -->` marker). Neither was found, so this file "
+                "cannot be checked and `build_chain_draft.py` would read nothing "
+                "from it either")],
             "counts": {"error": 1, "warning": 0, "info": 0},
         }
 

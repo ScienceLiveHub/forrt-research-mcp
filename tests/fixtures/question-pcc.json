@@ -1,0 +1,56 @@
+{
+  "entry": "https://w3id.org/sciencelive/np/RAEDNajh8Hz_fZbBRgOACKDxWrQYFfDYRks8-xxMEfKt4",
+  "paperDoi": "",
+  "apexCito": null,
+  "researchSynthesis": null,
+  "chains": [],
+  "nodeCount": 1,
+  "edgeCount": 0,
+  "sparqlEndpoint": "https://query.knowledgepixels.com/repo/full",
+  "nodes": [
+    {
+      "uri": "https://w3id.org/sciencelive/np/RAEDNajh8Hz_fZbBRgOACKDxWrQYFfDYRks8-xxMEfKt4",
+      "stepKind": "question",
+      "stepType": "Defining a PCC-based research question",
+      "templateUri": "https://w3id.org/np/RAmR-xqMgOq3oTJmOVDQFL2p5usID6zqRapizHy0UJb04",
+      "label": "",
+      "date": "",
+      "creators": [],
+      "creatorNames": [],
+      "authorsOrcid": [
+        "https://orcid.org/0000-0002-1784-2920"
+      ],
+      "plainTextExcerpts": [
+        "How much artificial light at night intrudes on the Po Delta Natura 2000 protected area, when lit settlements are detected from VIIRS satellite night lights using an astronomy source-extraction tool run in Galaxy? This matters because artificial light at night is a documented stressor for the nocturnal birds, insects and bats that wetland refuges like the Po Delta support, and because it tests whether a tool from one discipline (astronomy) can be reused, unchanged, to answer an Earth-observation / biodiversity question.",
+        "VIIRS night-lights radiance (NASA Black Marble) over the eastern Po Valley, analysed with the astronomy Source Extractor tool (SExtractor / SEP) running in Galaxy (usegalaxy.eu), overlaid on the EU Natura 2000 protected-area network.",
+        "The Po Delta \u2014 a Ramsar and Natura 2000 wetland on the Italian Adriatic coast and a key site for migratory and breeding birds \u2014 together with the nocturnal biodiversity it supports.",
+        "Artificial light at night (light pollution): the presence and spatial extent of artificial light within the protected area, and the proximity of lit human settlements to it."
+      ],
+      "githubUrls": [],
+      "question": {
+        "framework": "PCC",
+        "label": "Artificial-light intrusion on the Po Delta protected area from night lights",
+        "question": "How much artificial light at night intrudes on the Po Delta Natura 2000 protected area, when lit settlements are detected from VIIRS satellite night lights using an astronomy source-extraction tool run in Galaxy? This matters because artificial light at night is a documented stressor for the nocturnal birds, insects and bats that wetland refuges like the Po Delta support, and because it tests whether a tool from one discipline (astronomy) can be reused, unchanged, to answer an Earth-observation / biodiversity question.",
+        "components": [
+          {
+            "key": "population",
+            "label": "Population",
+            "text": "The Po Delta \u2014 a Ramsar and Natura 2000 wetland on the Italian Adriatic coast and a key site for migratory and breeding birds \u2014 together with the nocturnal biodiversity it supports."
+          },
+          {
+            "key": "concept",
+            "label": "Concept",
+            "text": "Artificial light at night (light pollution): the presence and spatial extent of artificial light within the protected area, and the proximity of lit human settlements to it."
+          },
+          {
+            "key": "context",
+            "label": "Context",
+            "text": "VIIRS night-lights radiance (NASA Black Marble) over the eastern Po Valley, analysed with the astronomy Source Extractor tool (SExtractor / SEP) running in Galaxy (usegalaxy.eu), overlaid on the EU Natura 2000 protected-area network."
+          }
+        ]
+      }
+    }
+  ],
+  "edges": [],
+  "externalCitations": []
+}

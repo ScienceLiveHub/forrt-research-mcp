@@ -151,3 +151,89 @@ class TestWikidataLookup:
         note = wikidata_lookup("Bombus", expected_type="Q16521")["note"]
         assert "candidates only" in note
         assert "none is asserted" in note
+
+
+class TestAgainstRealPublishedTerms:
+    """The Wikidata terms in this project's published chains.
+
+    `build_chain_draft.py` resolves the plain labels a drafter writes into
+    `{uri, label}` pairs, and those QIDs are what got signed. So the check that
+    matters is not "does the tool return something" but "does it return the same
+    QID the published chain used". Live, all ten agree at rank 1:
+
+        marine heatwave Q56321065 · sea surface temperature Q1507383
+        climate change Q125928   · time series analysis Q11850042
+        chlorophyll a Q133878    · remote sensing Q199687
+        estuary Q47053           · Sentinel-2 Q4302480
+        water quality Q625376    · atmospheric correction Q4817104
+
+    The fixture below is the real API response for the first of them, trimmed to
+    the fields the code reads, so the extraction is pinned against a genuine
+    Wikidata payload shape rather than a hand-written one.
+    """
+
+    @pytest.fixture
+    def real_response(self, monkeypatch):
+        import json
+        from pathlib import Path
+        data = json.loads(
+            (Path(__file__).parent / "fixtures" / "wikidata-marine-heatwave.json").read_text())
+
+        def fake(params):
+            if params["action"] == "wbsearchentities":
+                return data["search"]
+            if params.get("props") == "claims":
+                return data["claims"]
+            ids = params["ids"].split("|")
+            return {"entities": {q: {"labels": {"en": {"value": f"label-{q}"}}}} for q in ids}
+
+        monkeypatch.setattr(G, "_wikidata_api", fake)
+
+    def test_the_published_qid_comes_back_first(self, real_response):
+        result = wikidata_lookup("marine heatwave", limit=5)
+        assert result["candidates"][0]["qid"] == "Q56321065"
+        assert result["candidates"][0]["label"] == "marine heatwave"
+        assert "anomalously warm water" in result["candidates"][0]["description"]
+
+    def test_its_real_type_statements_are_extracted(self, real_response):
+        top = wikidata_lookup("marine heatwave", limit=5)["candidates"][0]
+        assert [t["qid"] for t in top["types"]] == ["Q215864"]
+
+    def test_type_checking_works_against_the_real_payload(self, real_response):
+        """Q215864 is the class it is actually a subclass of; anything else is not."""
+        assert wikidata_lookup("marine heatwave", expected_type="Q215864",
+                               limit=5)["candidates"][0]["typeMatches"] is True
+        assert wikidata_lookup("marine heatwave", expected_type="Q16521",
+                               limit=5)["candidates"][0]["typeMatches"] is False
+
+
+class TestCslShapeVariance:
+    """CSL fields arrive as a string, a list, or an EMPTY list. The empty list
+    is the one that bites: `value[0]` raises IndexError on a DOI that resolves
+    perfectly well, and a crash is the worst outcome — the caller cannot tell a
+    tool bug from a bad identifier. Found by resolving 10.5194/nhess-2023-82,
+    whose `container-title` is `[]`."""
+
+    @pytest.mark.parametrize("container,expected", [
+        ([], ""),
+        (["International Journal of Climatology"], "International Journal of Climatology"),
+        ("Nature", "Nature"),
+        (None, ""),
+    ])
+    def test_container_title_in_any_shape(self, monkeypatch, container, expected):
+        stub_http(monkeypatch, 200, json.dumps({**OLIVER_CSL, "container-title": container}))
+        assert resolve_doi("10.1038/x")["container"] == expected
+
+    @pytest.mark.parametrize("title,expected", [
+        ([], ""),
+        (["A title"], "A title"),
+        ("A title", "A title"),
+        (None, ""),
+    ])
+    def test_title_in_any_shape(self, monkeypatch, title, expected):
+        stub_http(monkeypatch, 200, json.dumps({**OLIVER_CSL, "title": title}))
+        assert resolve_doi("10.1038/x")["title"] == expected
+
+    def test_an_empty_container_still_resolves(self, monkeypatch):
+        stub_http(monkeypatch, 200, json.dumps({**OLIVER_CSL, "container-title": []}))
+        assert resolve_doi("10.1038/x")["resolves"] is True

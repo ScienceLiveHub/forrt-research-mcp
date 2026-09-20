@@ -17,7 +17,8 @@ SPEC = {
     "templateUri": "https://w3id.org/np/RAoutcome",
     "source": "live",
     "fields": [
-        {"id": "outcome", "label": "short URI suffix", "kind": "uri", "required": True},
+        {"id": "outcome", "label": "short URI suffix for outcome ID", "kind": "uri",
+         "required": True},
         {"id": "study", "label": "choose study", "kind": "guided_choice",
          "required": True,
          "values_from_api": ["http://purl.org/nanopub/api/find_signed_things?x="]},
@@ -252,3 +253,68 @@ def test_a_file_without_field_markers_is_not_silently_passed(tmp_path):
     r = D.validate_draft(write(tmp_path, "# 05 — Outcome\n\nJust prose.\n"))
     assert r["publishable"] is False
     assert r["findings"][0]["check"] == "parse"
+
+
+class TestHeadingBasedParsing:
+    """`build_chain_draft.py` reads a draft by `###` heading matched to the
+    template field's LABEL, and never looks at `<!-- field: -->` markers. A
+    validator that required markers rejected 17 real drafts outright — the
+    fiesta-galaxy studies carry none."""
+
+    def test_a_draft_with_no_markers_still_parses(self, tmp_path):
+        body = ("## Field-by-field draft\n\n"
+                "### short URI suffix for outcome ID (text input, required)\n\n"
+                "```\nan-outcome-slug\n```\n\n"
+                "### conclusion\n\nGuidance prose here.\n\n"
+                "```\nThe claim is validated.\n```\n")
+        fields = D.parse_draft(body, SPEC, "05_outcome")
+        assert fields["outcome"]["value"] == "an-outcome-slug"
+        assert fields["conclusion"]["value"] == "The claim is validated."
+
+    def test_heading_normalisation_matches_the_builder(self):
+        """Both strip parentheticals and leading verbs, so "### Describe the
+        conclusion (textarea, required)" matches the label "conclusion"."""
+        assert D.normalise_heading("Describe the conclusion (textarea, required)") == \
+            D.normalise_heading("conclusion")
+        assert D.normalise_heading("Short URI suffix for outcome ID") == "outcome id"
+
+    def test_an_aliased_heading_is_found(self, tmp_path, monkeypatch):
+        """Some template labels are unusable — 06_citation's `work` is labelled
+        "DOI (…) or other URL of the citing article" while the draft says
+        "Identifier for the citing creative work". The builder keeps an alias
+        table; so must this."""
+        spec = {"step": "06_citation", "templateUri": "u", "source": "live",
+                "fields": [{"id": "work", "label": "DOI (https://doi.org/10...) "
+                            "or other URL of the citing article",
+                            "kind": "external_uri", "required": True}]}
+        body = ("### Identifier for the citing creative work (text input, required)\n\n"
+                "```\nhttps://w3id.org/np/RAoutcome\n```\n")
+        fields = D.parse_draft(body, spec, "06_citation")
+        assert fields["work"]["value"] == "https://w3id.org/np/RAoutcome"
+
+    def test_markers_still_work_and_fill_what_headings_miss(self, tmp_path):
+        body = (field("outcome", "from-marker")
+                + "### conclusion\n\n```\nfrom heading\n```\n")
+        fields = D.parse_draft(body, SPEC, "05_outcome")
+        assert fields["outcome"]["value"] == "from-marker"
+        assert fields["conclusion"]["value"] == "from heading"
+
+
+class TestVocabularyTypography:
+    """A drafter retyping an option reproduces its meaning, not its typography."""
+
+    def test_an_em_dash_and_trailing_stop_still_match(self, tmp_path):
+        """Real drafts write "Replication Study — replication with different
+        methodology or conditions." where the template has an ASCII hyphen and
+        no full stop. Rejecting that is a false failure on a correct value."""
+        body = GOOD.replace(
+            "- [x] validated",
+            "- [x] validated — the claim held.")
+        result = D.validate_draft(write(tmp_path, body))
+        assert result["publishable"] is True
+        assert not [f for f in result["findings"]
+                    if f["check"] == "vocabulary" and f["severity"] == "error"]
+
+    def test_a_genuinely_different_option_still_fails(self, tmp_path):
+        body = GOOD.replace("- [x] validated", "- [x] mostly validated — sort of.")
+        assert D.validate_draft(write(tmp_path, body))["publishable"] is False
