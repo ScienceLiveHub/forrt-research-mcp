@@ -82,7 +82,7 @@ class TestResearchSynthesisApex:
 
 class TestReplicatedPaperOnASecondChain:
     def test_the_cito_still_wins_over_reported_paper_doi(self, raw):
-        paper = C.replicated_paper(raw)
+        paper = C.cited_paper(raw)
         assert paper["doi"] == SENTINEL2
         assert paper["source"] == "cito-citedTargets"
 
@@ -90,7 +90,7 @@ class TestReplicatedPaperOnASecondChain:
         """`paperDoi` names the same unrelated paper here as on the
         marine-heatwave chain, so the fault is systemic rather than one bad
         record. If this test ever fails, the upstream bug was fixed."""
-        paper = C.replicated_paper(raw)
+        paper = C.cited_paper(raw)
         assert paper["reportedPaperDoi"] == LIFEWATCH
         assert paper["disagreesWithReported"] is True
 

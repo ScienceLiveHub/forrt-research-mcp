@@ -33,14 +33,27 @@ from .template_spec import parse_template, spec_to_dict
 
 # vocabulary name -> (chain step, field id). Each names a restricted-choice
 # field on a real template; nothing here is a hand-copied list of terms.
+#
+# Note `pico_question_type` is PICO-specific on purpose. Step 01 has three
+# alternative anchors and they are not variations of one form:
+#   01_quote  paper + quotation + comment          (no type, no label)
+#   01_pico   + type [5 options] + P/I/C/O descriptions
+#   01_pcc    + P/C/C descriptions, and NO type field at all
+# A PCC question therefore has no type vocabulary to look up, and naming this
+# `question_type` would imply otherwise.
 VOCABULARIES: dict[str, tuple[str, str]] = {
     "claim_type": ("03_claim", "forrtType"),
     "study_type": ("04_study", "type"),
     "validation_status": ("05_outcome", "validationStatus"),
     "confidence_level": ("05_outcome", "confidenceLevel"),
     "cito_relation": ("06_citation", "cites"),
-    "question_type": ("01_pico", "type"),
+    "pico_question_type": ("01_pico", "type"),
 }
+
+# Alternative anchors for step 01. All three are valid chain starts; which one
+# fits is independent of whether the study is a reproduction, a replication or
+# original research.
+ANCHOR_STEPS = ("01_quote", "01_pico", "01_pcc")
 
 
 def _data(name: str) -> dict:
