@@ -3,7 +3,7 @@
   "name": "org.sciencelive4all/forrt-research-mcp",
   "title": "FORRT Research",
   "description": "Produce verifiable FORRT nanopublication chains: grounded quote checks and Science Live projections.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "websiteUrl": "https://sciencelive4all.org",
   "repository": {
     "url": "https://github.com/ScienceLiveHub/forrt-research-mcp",
@@ -13,7 +13,7 @@
     {
       "registryType": "pypi",
       "identifier": "forrt-research-mcp",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "transport": {
         "type": "stdio"
       },
