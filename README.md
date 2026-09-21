@@ -1,5 +1,7 @@
 # forrt-research-mcp
 
+<!-- mcp-name: org.sciencelive4all/forrt-research-mcp -->
+
 An MCP server for **producing** verifiable FORRT nanopublication chains — the
 tools a researcher needs while doing the work, not while looking for it. It
 serves all three shapes of study on the same rails: reproduction, replication,

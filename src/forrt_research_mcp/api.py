@@ -28,7 +28,7 @@ TIMEOUT = 90
 # — verified 2026-09-02: same URI, same key, 403 under that agent and 200 under
 # this one. Without an explicit User-Agent the server is dead on arrival for
 # every user, and no hermetic test can catch it.
-USER_AGENT = ("forrt-research-mcp/0.1.0 "
+USER_AGENT = ("forrt-research-mcp/0.1.1 "
               "(+https://github.com/ScienceLiveHub/forrt-research-mcp)")
 
 
