@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+title: forrt-research-mcp
+message: >-
+  If you use forrt-research-mcp, please cite it using the metadata in this file.
+type: software
+authors:
+  - family-names: Fouilloux
+    given-names: Anne
+    orcid: https://orcid.org/0000-0002-1784-2920
+    affiliation: LifeWatch ERIC
+repository-code: https://github.com/ScienceLiveHub/forrt-research-mcp
+url: https://sciencelive4all.org
+abstract: >-
+  An MCP server for producing verifiable FORRT nanopublication chains. It gives
+  AI agents the tools a researcher needs while doing the work: grounded quote
+  verification against the source paper, compact projections of Science Live
+  constellations, and validation of chain drafts and published chains. It serves
+  reproductions, replications and new research on the same rails.
+keywords:
+  - FORRT
+  - nanopublications
+  - replication
+  - reproducibility
+  - open science
+  - MCP
+  - Science Live
+license: MIT
