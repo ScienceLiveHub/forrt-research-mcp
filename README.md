@@ -2,6 +2,8 @@
 
 <!-- mcp-name: org.sciencelive4all/forrt-research-mcp -->
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22869401.svg)](https://doi.org/10.5281/zenodo.22869401) [![PyPI](https://img.shields.io/pypi/v/forrt-research-mcp)](https://pypi.org/project/forrt-research-mcp/)
+
 An MCP server for **producing** verifiable FORRT nanopublication chains — the
 tools a researcher needs while doing the work, not while looking for it. It
 serves all three shapes of study on the same rails: reproduction, replication,
