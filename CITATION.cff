@@ -25,3 +25,8 @@ keywords:
   - MCP
   - Science Live
 license: MIT
+doi: 10.5281/zenodo.22869401
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.22869401
+    description: Concept DOI (resolves to the latest version)
