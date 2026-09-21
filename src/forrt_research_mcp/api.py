@@ -5,11 +5,11 @@ without a dependency tree.
 
 Base URL precedence: explicit argument > SCIENCELIVE_API_BASE > DEFAULT_API_BASE.
 
-DEFAULT_API_BASE is the **dev** deployment deliberately, for now:
-`/np/constellation` is newer than the current production deployment, so as of
-2026-09-02 production answers HTTP 500 on known-good URIs while api-dev serves
-them with 200. That is deployment lag, not a fault — flip DEFAULT_API_BASE to
-production once the release lands there.
+DEFAULT_API_BASE is production. `/np/constellation` reached production on
+2026-09-20; on 2026-09-21 it returned the same nodes, edges and labels as
+api-dev for known chains. A cold (uncached) constellation can take ~60 s on
+either deployment before Cloudflare caches it (4 h), hence TIMEOUT = 90.
+Set SCIENCELIVE_API_BASE=https://api-dev.sciencelive4all.org to test against dev.
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-DEFAULT_API_BASE = "https://api-dev.sciencelive4all.org"
+DEFAULT_API_BASE = "https://api.sciencelive4all.org"
 NANOPUB_RESOLVER = "https://w3id.org/np/"
 TIMEOUT = 90
 
@@ -28,7 +28,7 @@ TIMEOUT = 90
 # — verified 2026-09-02: same URI, same key, 403 under that agent and 200 under
 # this one. Without an explicit User-Agent the server is dead on arrival for
 # every user, and no hermetic test can catch it.
-USER_AGENT = ("forrt-research-mcp/0.1.0 "
+USER_AGENT = ("forrt-research-mcp/0.1.1 "
               "(+https://github.com/ScienceLiveHub/forrt-research-mcp)")
 
 

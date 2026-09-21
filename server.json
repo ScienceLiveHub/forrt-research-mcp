@@ -1,0 +1,36 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "org.sciencelive4all/forrt-research-mcp",
+  "title": "FORRT Research",
+  "description": "Produce verifiable FORRT nanopublication chains: grounded quote checks and Science Live projections.",
+  "version": "0.1.1",
+  "websiteUrl": "https://sciencelive4all.org",
+  "repository": {
+    "url": "https://github.com/ScienceLiveHub/forrt-research-mcp",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "forrt-research-mcp",
+      "version": "0.1.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "SCIENCELIVE_API_BASE",
+          "description": "Science Live API base URL (default: https://api.sciencelive4all.org)",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "SCIENCELIVE_API_KEY",
+          "description": "Science Live API key; optional, /np/constellation is a public read",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

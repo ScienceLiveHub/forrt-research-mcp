@@ -1,5 +1,7 @@
 # forrt-research-mcp
 
+<!-- mcp-name: org.sciencelive4all/forrt-research-mcp -->
+
 An MCP server for **producing** verifiable FORRT nanopublication chains — the
 tools a researcher needs while doing the work, not while looking for it. It
 serves all three shapes of study on the same rails: reproduction, replication,
@@ -129,16 +131,14 @@ not clash with a per-repo config. For other agents, the stdio command is
 
 ```bash
 # optional
-export SCIENCELIVE_API_BASE="https://api-dev.sciencelive4all.org"  # default
+export SCIENCELIVE_API_BASE="https://api.sciencelive4all.org"  # default (production)
 export SCIENCELIVE_API_KEY="sl_…"   # /np/constellation is a public read
 ```
 
-> **The default base is `api-dev` deliberately, for now.** `/np/constellation`
-> is newer than the current production deployment, so as of 2026-09-02
-> production answers HTTP 500 on known-good URIs while `api-dev` serves them
-> with 200. This is a deployment lag, not a fault. Once the release reaches
-> production, switch `DEFAULT_API_BASE` in `api.py` — `SCIENCELIVE_API_BASE`
-> already overrides it in the meantime.
+> The default base is **production**. To test against the dev deployment, set
+> `SCIENCELIVE_API_BASE=https://api-dev.sciencelive4all.org`. A constellation
+> that nobody has requested recently can take ~60 s to build; after that it is
+> cached for 4 h and returns in well under a second.
 
 ## Tools
 

@@ -10,7 +10,7 @@ except `pypdf`; `mcp` is needed only to run the server wrapper.
 """
 from __future__ import annotations
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 from .constellation import prior_work, summary
 from .quotes import verify_quote
