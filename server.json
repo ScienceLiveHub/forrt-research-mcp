@@ -20,7 +20,7 @@
       "environmentVariables": [
         {
           "name": "SCIENCELIVE_API_BASE",
-          "description": "Science Live API base URL (default: https://api-dev.sciencelive4all.org)",
+          "description": "Science Live API base URL (default: https://api.sciencelive4all.org)",
           "isRequired": false,
           "isSecret": false
         },

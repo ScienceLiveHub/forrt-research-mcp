@@ -18,7 +18,7 @@ OpenAIRE MCP (which searches the literature). This server does neither — it
 helps a researcher *produce* a correct chain, and verify one that exists.
 
 Environment:
-    SCIENCELIVE_API_BASE   default https://api-dev.sciencelive4all.org
+    SCIENCELIVE_API_BASE   default https://api.sciencelive4all.org
     SCIENCELIVE_API_KEY    optional; /np/constellation is a public read
 """
 from __future__ import annotations
