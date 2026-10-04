@@ -157,3 +157,51 @@ class TestPriorWork:
 
     def test_carries_the_corrected_paper_identity(self, raw):
         assert C.prior_work("x", raw=raw)["citedPaper"]["doi"] == OLIVER
+
+
+class TestMultiTargetCito:
+    """A CiTO that cites the paper together with a method and data sources.
+
+    Sorting the targets and taking the first named a data portal as the
+    replicated paper (forrt-research-mcp#9). The verdict relation names it.
+    """
+
+    PAPER = "https://doi.org/10.1038/s41586-024-08106-4"
+    RAW = {
+        "paperDoi": PAPER,
+        "apexCito": {
+            "citedTargets": ["https://colombia.mapbiomas.org/", "https://doi.org/10.5281/zenodo.7428804",
+                             PAPER, "https://doi.org/10.21428/d28e8e57.5411b150"],
+            "citations": [
+                {"relation": "citesAsDataSource", "target": "https://colombia.mapbiomas.org/"},
+                {"relation": "citesAsDataSource", "target": "https://doi.org/10.5281/zenodo.7428804"},
+                {"relation": "qualifies", "target": PAPER},
+                {"relation": "usesMethodIn", "target": "https://doi.org/10.21428/d28e8e57.5411b150"},
+            ],
+        },
+        "nodes": [],
+        "chains": [],
+    }
+
+    def test_the_verdict_relation_names_the_paper(self):
+        paper = C.cited_paper(self.RAW)
+        assert paper["doi"] == self.PAPER
+        assert paper["selectedBy"] == "verdict-relation"
+        assert paper["source"] == "cito-citedTargets"
+        assert paper["disagreesWithReported"] is False
+
+    def test_relation_given_as_a_full_cito_uri(self):
+        raw = {**self.RAW, "apexCito": {**self.RAW["apexCito"], "citations": [
+            {"relation": "http://purl.org/spar/cito/qualifies", "target": self.PAPER},
+            {"relation": "http://purl.org/spar/cito/citesAsDataSource", "target": "https://colombia.mapbiomas.org/"}]}}
+        assert C.cited_paper(raw)["doi"] == self.PAPER
+
+    def test_without_relations_a_doi_beats_a_plain_url(self):
+        raw = {"apexCito": {"citedTargets": ["https://colombia.mapbiomas.org/", self.PAPER]}}
+        paper = C.cited_paper(raw)
+        assert paper["doi"] == self.PAPER
+        assert paper["selectedBy"] == "first-doi"
+
+    def test_disagreement_compares_the_chosen_paper(self):
+        raw = {**self.RAW, "paperDoi": "https://doi.org/10.5281/zenodo.7428804"}
+        assert C.cited_paper(raw)["disagreesWithReported"] is True

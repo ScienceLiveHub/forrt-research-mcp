@@ -94,6 +94,46 @@ def _quote_text_and_comment(node: dict) -> tuple[str, str, str]:
     return quoted, (others[0] if others else ""), "excerpt-matched-to-label"
 
 
+VERDICT_RELATIONS = {"confirms", "qualifies", "disputes"}
+
+
+def _norm_target(t: str) -> str:
+    """Compare a DOI target regardless of its `https://doi.org/` prefix and case."""
+    t = (t or "").strip()
+    for prefix in ("https://doi.org/", "http://doi.org/", "https://dx.doi.org/", "doi:"):
+        if t.lower().startswith(prefix):
+            t = t[len(prefix):]
+            break
+    return t.lower()
+
+
+def _select_cited_paper(raw: dict, unique: list[str]) -> tuple[str, str]:
+    """The paper a chain replicates, when its CiTO cites several works.
+
+    A CiTO may cite a method (`usesMethodIn`), data (`citesAsDataSource`) and the
+    replicated paper together; only the verdict relation (`confirms` /
+    `qualifies` / `disputes`) names the paper. Prefer its target, then the first
+    DOI target, then the first target (the previous behaviour, kept as the last
+    resort so single-target chains are unchanged).
+    """
+    pairs: list[tuple[str, str]] = []
+    sources = [raw.get("apexCito") or {}]
+    sources += [(n.get("cito") or {}) for n in raw.get("nodes") or [] if n.get("stepKind") == "cito"]
+    for src in sources:
+        for c in src.get("citations") or []:
+            rel = (c.get("relation") or "").rsplit("/", 1)[-1].rsplit("#", 1)[-1]
+            tgt = (c.get("target") or "").strip()
+            if tgt:
+                pairs.append((rel, tgt))
+    verdict = sorted({t for r, t in pairs if r in VERDICT_RELATIONS})
+    if verdict:
+        return verdict[0], "verdict-relation"
+    dois = [t for t in unique if _norm_target(t).startswith("10.")]
+    if dois:
+        return dois[0], "first-doi"
+    return unique[0], "first-target"
+
+
 def cited_paper(raw: dict) -> dict:
     """Which paper this constellation's chains actually cite.
 
@@ -117,12 +157,14 @@ def cited_paper(raw: dict) -> dict:
 
     unique = sorted({c.strip() for c in cited if c and c.strip()})
     if unique:
+        doi, selected_by = _select_cited_paper(raw, unique)
         return {
-            "doi": unique[0],
+            "doi": doi,
             "allCitedTargets": unique,
             "source": "cito-citedTargets",
+            "selectedBy": selected_by,
             "reportedPaperDoi": reported,
-            "disagreesWithReported": bool(reported) and reported not in unique,
+            "disagreesWithReported": bool(reported) and _norm_target(reported) != _norm_target(doi),
         }
     return {
         "doi": reported,
