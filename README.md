@@ -260,12 +260,22 @@ retracts or supersedes.
 | repository | the Outcome's archived version DOI resolves |
 | cited-doi | every DOI the chain cites resolves |
 | verdict-relation | **the CiTO relation agrees with the Outcome's verdict** |
+| cito-citing-work | the ledger's CiTO cites from the ledger's Outcome |
+| neighbours | other chains the walk reached — context only, never judged |
 
 That last one is the failure most worth catching: `Validated` implies
 `confirms`, `PartiallySupported` implies `qualifies`, `Contradicted` implies
 `disputes`. A mismatch means the Outcome and the Citation disagree about what
 the replication actually found — a chain that cites `confirms` for a paper it
 contradicted is worse than no chain at all.
+
+**Only the ledger's own Outcome and CiTO are judged.** Published work is a
+network: chains citing the same paper turn up in the same walk, and one CiTO
+cites several works (`confirms` the paper, `usesMethodIn` a method,
+`citesAsDataSource` data). So the relation→target pairs are read from the
+ledger's step-06 TriG, and the verdict is checked against the relation on the
+paper the Quote (step 01) quotes. Other chains are listed as `neighbours`. If the
+check cannot be made, it says so with a `warn` rather than skipping it.
 
 **A constellation alone cannot verify a chain**, which is why this does not try.
 On both real chains the walk stops short of the upstream anchors, so anything it

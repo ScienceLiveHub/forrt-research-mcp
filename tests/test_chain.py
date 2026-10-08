@@ -432,3 +432,174 @@ def test_parse_published_still_skips_an_unpublished_row():
 
 def test_parse_published_ignores_a_non_nanopub_url():
     assert C.parse_published(_ledger("https://example.org/not-a-nanopub")) == {}
+
+
+# --- A network of chains (forrt-research-mcp#11) --------------------------
+#
+# Published work is not one chain per walk. The real case: the
+# fiesta-decrop-reproduction CiTO `confirms` Decrop 2025, and the
+# fiesta-scattering-bio chain `extends` the same paper, so a walk from either
+# reaches both. The ledger's own CiTO is hoisted to the apex, and with two
+# chains in view a first version skipped the ledger's check and reported the
+# neighbour's `extends` instead — GREEN whatever the ledger's CiTO said.
+
+NEIGHBOUR_OUTCOME = "https://w3id.org/sciencelive/np/RAneighbouroutcome0000000000000000"
+METHOD = "https://doi.org/10.1051/0004-6361/202244566"
+DATA = "https://doi.org/10.5281/zenodo.19701133"
+
+
+def cito_trig(pairs, citing=OUTCOME) -> str:
+    """A CiTO nanopub as the platform publishes it, with the given pairs."""
+    body = ";\n    ".join(f"<http://purl.org/spar/cito/{rel}> <{target}>"
+                          for rel, target in pairs)
+    cito = CITO.replace("/sciencelive/np/", "/np/")
+    return f"""@prefix np: <http://www.nanopub.org/nschema#> .
+<{cito}/Head> {{
+  <{cito}> a np:Nanopublication; np:hasAssertion <{cito}/assertion> .
+}}
+<{cito}/assertion> {{
+  <{citing}> a <https://schema.org/CreativeWork>;
+    {body} .
+}}
+"""
+
+
+def quote_trig(paper=PAPER) -> str:
+    quote = QUOTE.replace("/sciencelive/np/", "/np/")
+    return f"""@prefix np: <http://www.nanopub.org/nschema#> .
+<{quote}/Head> {{
+  <{quote}> a np:Nanopublication; np:hasAssertion <{quote}/assertion> .
+}}
+<{quote}/assertion> {{
+  <{quote}#q> <http://purl.org/spar/cito/quotes> <{paper}> .
+}}
+"""
+
+
+def network_view(neighbour_relations=("extends",)) -> dict:
+    """The ledger's chain plus a neighbour citing the same paper, own CiTO at the apex."""
+    v = view(apex=True)
+    v["chains"].append({
+        "id": "c2", "outcomeUri": NEIGHBOUR_OUTCOME, "verdict": "Validated",
+        "confidence": "HighConfidence", "citoRelations": list(neighbour_relations),
+        "steps": [{"step": "Outcome", "uri": NEIGHBOUR_OUTCOME}], "stepsPresent": ["Outcome"]})
+    return v
+
+
+def stub_trig(monkeypatch, cito=None, quote=None):
+    def fetch(uri, **kw):
+        if C.canonical_uri(uri) == C.canonical_uri(CITO) and cito is not None:
+            return cito
+        if C.canonical_uri(uri) == C.canonical_uri(QUOTE) and quote is not None:
+            return quote
+        return "@prefix this: <x> ."
+    monkeypatch.setattr(C, "fetch_trig", fetch)
+
+
+def verdict_rows(result):
+    return [r for r in result["rows"] if r["check"] == "verdict-relation"]
+
+
+class TestReadCito:
+    def test_pairs_each_relation_with_its_target(self):
+        got = C.read_cito(cito_trig([("confirms", PAPER), ("usesMethodIn", METHOD)]))
+        assert got["citing"] == [OUTCOME]
+        assert sorted(got["pairs"]) == sorted([("confirms", PAPER), ("usesMethodIn", METHOD)])
+
+    def test_reads_the_quoted_paper(self):
+        assert C.read_quoted_paper(quote_trig()) == PAPER
+
+    def test_a_question_anchor_quotes_nothing(self):
+        assert C.read_quoted_paper("@prefix this: <x> .") == ""
+
+
+class TestNetworkOfChains:
+    def test_the_ledgers_own_cito_is_judged_not_the_neighbours(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(C, "_summary", lambda uri, **kw: network_view())
+        stub_trig(monkeypatch, cito=cito_trig([("confirms", PAPER)]), quote=quote_trig())
+        result = C.verify_chain(write(tmp_path, ledger()))
+        rows = verdict_rows(result)
+        assert [r["status"] for r in rows] == ["pass"]
+        assert "confirms" in rows[0]["message"]
+
+    def test_a_disagreeing_cito_fails_even_with_a_neighbour_in_view(self, tmp_path, monkeypatch):
+        """The case the first version passed: GREEN with `disputes` on a Validated outcome."""
+        monkeypatch.setattr(C, "_summary", lambda uri, **kw: network_view())
+        stub_trig(monkeypatch, cito=cito_trig([("disputes", PAPER)]), quote=quote_trig())
+        result = C.verify_chain(write(tmp_path, ledger()))
+        assert result["green"] is False
+        assert verdict_rows(result)[0]["status"] == "fail"
+
+    def test_neighbours_are_context_not_verdicts(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(C, "_summary", lambda uri, **kw: network_view(("disputes",)))
+        stub_trig(monkeypatch, cito=cito_trig([("confirms", PAPER)]), quote=quote_trig())
+        result = C.verify_chain(write(tmp_path, ledger()))
+        assert result["green"] is True
+        context = [r for r in result["rows"] if r["check"] == "neighbours"]
+        assert context and context[0]["status"] == "info"
+        assert NEIGHBOUR_OUTCOME in context[0]["outcomes"]
+
+    def test_an_unreadable_cito_in_a_network_warns_instead_of_skipping(
+            self, tmp_path, monkeypatch):
+        """No TriG and the apex is someone else's CiTO: say so, never pass silently."""
+        v = network_view()
+        v["apexCito"] = {"uri": "https://w3id.org/np/RAsomeoneelsescito000000000000000",
+                         "relations": ["extends"], "citedTargets": [PAPER]}
+        monkeypatch.setattr(C, "_summary", lambda uri, **kw: v)
+        stub_trig(monkeypatch)
+        rows = verdict_rows(C.verify_chain(write(tmp_path, ledger())))
+        assert [r["status"] for r in rows] == ["warn"]
+
+    def test_a_cito_citing_from_another_outcome_is_flagged(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(C, "_summary", lambda uri, **kw: network_view())
+        stub_trig(monkeypatch, cito=cito_trig([("confirms", PAPER)], citing=NEIGHBOUR_OUTCOME),
+                  quote=quote_trig())
+        rows = C.verify_chain(write(tmp_path, ledger()))["rows"]
+        assert any(r["check"] == "cito-citing-work" and r["status"] == "warn" for r in rows)
+
+
+class TestRelationOnTheQuotedPaper:
+    """One CiTO cites several works; only the relation on the claim's paper
+    carries the verdict."""
+
+    def test_a_confirms_on_the_method_paper_does_not_hide_a_wrong_relation(
+            self, tmp_path, monkeypatch):
+        stub_trig(monkeypatch, quote=quote_trig(),
+                  cito=cito_trig([("disputes", PAPER), ("confirms", METHOD)]))
+        result = C.verify_chain(write(tmp_path, ledger()))
+        assert verdict_rows(result)[0]["status"] == "fail"
+
+    def test_extends_on_the_paper_with_method_and_data_is_info(self, tmp_path, monkeypatch):
+        """fiesta-scattering-bio: extends the paper, uses a method, cites data."""
+        stub_trig(monkeypatch, quote=quote_trig(), cito=cito_trig(
+            [("extends", PAPER), ("usesMethodIn", METHOD), ("citesAsDataSource", DATA)]))
+        result = C.verify_chain(write(tmp_path, ledger()))
+        assert result["green"] is True
+        assert verdict_rows(result)[0]["status"] == "info"
+
+    def test_a_cito_that_never_cites_the_quoted_paper_warns(self, tmp_path, monkeypatch):
+        stub_trig(monkeypatch, quote=quote_trig(), cito=cito_trig([("confirms", METHOD)]))
+        assert verdict_rows(C.verify_chain(write(tmp_path, ledger())))[0]["status"] == "warn"
+
+
+class TestCitedPaperFromOwnCito:
+    """forrt-research-mcp#9: the paper is the verdict relation's target, not
+    the alphabetically first of the CiTO's targets."""
+
+    def test_the_quoted_paper_with_the_verdict_relation_wins(self, tmp_path, monkeypatch):
+        portal = "https://colombia.mapbiomas.org/"
+        stub_trig(monkeypatch, quote=quote_trig(), cito=cito_trig(
+            [("citesAsDataSource", portal), ("qualifies", PAPER), ("usesMethodIn", METHOD)]))
+        monkeypatch.setattr(C, "_summary", lambda uri, **kw: view(
+            verdict="PartiallySupported", relations=("qualifies",)))
+        monkeypatch.setattr(C, "_url_reachable", lambda url, **kw: True)
+        paper = C.verify_chain(write(tmp_path, ledger()))["citedPaper"]
+        assert paper["doi"] == PAPER
+        assert paper["selectedBy"] == "verdict-relation-on-quoted-paper"
+        assert paper["source"] == "cito-nanopub"
+        assert portal in paper["allCitedTargets"]
+
+    def test_without_a_readable_cito_the_walks_answer_stands(self, tmp_path):
+        paper = C.verify_chain(write(tmp_path, ledger()))["citedPaper"]
+        assert paper["doi"] == PAPER
+        assert paper["source"] == "cito-citedTargets"
