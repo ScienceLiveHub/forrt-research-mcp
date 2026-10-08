@@ -193,60 +193,249 @@ def _check_repository(view: dict, published: dict, repo_url: str) -> list[dict]:
                  declared=declared, expected=want)]
 
 
-def _check_verdict_relation(view: dict, apex_relations: list[str]) -> list[dict]:
-    """The CiTO relation has to agree with the Outcome it cites from.
+def _local(term: str) -> str:
+    """`http://purl.org/spar/cito/confirms` -> `confirms`."""
+    return (term or "").rsplit("/", 1)[-1].rsplit("#", 1)[-1]
+
+
+def _norm_target(target: str) -> str:
+    """Compare a DOI target regardless of its `https://doi.org/` prefix and case."""
+    t = (target or "").strip()
+    for prefix in ("https://doi.org/", "http://doi.org/", "https://dx.doi.org/", "doi:"):
+        if t.lower().startswith(prefix):
+            t = t[len(prefix):]
+            break
+    return t.lower()
+
+
+def _assertion_triples(trig: str) -> list[tuple[str, str, str]]:
+    """The (subject, predicate, object) triples of a nanopub's assertion graph."""
+    import warnings
+
+    from rdflib import Dataset, URIRef
+
+    has_assertion = URIRef("http://www.nanopub.org/nschema#hasAssertion")
+    with warnings.catch_warnings():
+        # rdflib's own TriG parser uses its deprecated ConjunctiveGraph and
+        # default_context; nothing here calls either.
+        for message in ("Dataset.default_context", "ConjunctiveGraph is deprecated"):
+            warnings.filterwarnings("ignore", message=message,
+                                    category=DeprecationWarning)
+        dataset = Dataset()
+        dataset.parse(data=trig, format="trig")
+        quads = list(dataset.quads((None, None, None, None)))
+    graphs = {o for _s, p, o, _g in quads if p == has_assertion}
+    return [(str(s), str(p), str(o)) for s, p, o, g in quads
+            if getattr(g, "identifier", g) in graphs]
+
+
+def read_cito(trig: str) -> dict:
+    """The citing work(s) and the exact relation -> target pairs of a CiTO nanopub.
+
+    Read from the nanopub itself rather than from the constellation: the walk
+    reports a CiTO's `relations` and `citedTargets` as two unpaired lists, and
+    places a CiTO at the apex or inside a chain depending on what else the walk
+    reached. The TriG says exactly which relation points at which work.
+    """
+    citing: list[str] = []
+    pairs: list[tuple[str, str]] = []
+    for s, p, o in _assertion_triples(trig):
+        if p.startswith(CITO):
+            pairs.append((_local(p), o))
+            if s not in citing:
+                citing.append(s)
+    return {"citing": citing, "pairs": pairs}
+
+
+def read_quoted_paper(trig: str) -> str:
+    """The DOI a Quote-with-comment quotes (`cito:quotes`), or "" for PICO/PCC."""
+    for _s, p, o in _assertion_triples(trig):
+        if p == CITO + "quotes":
+            return o
+    return ""
+
+
+def _own_citation(published: dict, view: dict) -> dict:
+    """The ledger's own CiTO: from its TriG when readable, else from the walk.
+
+    The walk fallback is scoped to the ledger's chain — its own `citoRelations`,
+    or the apex only when the apex IS step 06. Using the apex whenever the walk
+    happened to contain a single chain is what let a neighbour's citation stand
+    in for this one (forrt-research-mcp#11).
+    """
+    cito_uri = published.get("06", "")
+    if not cito_uri:
+        return {"source": "none", "citing": [], "pairs": []}
+    try:
+        cito = read_cito(fetch_trig(cito_uri))
+    except Exception:  # noqa: BLE001 — unreadable TriG falls back to the walk
+        cito = {"citing": [], "pairs": []}
+    if cito["pairs"]:
+        return {"source": "cito-nanopub", **cito}
+
+    own = canonical_uri(published.get("05", ""))
+    for chain in view["chains"]:
+        if canonical_uri(chain.get("outcomeUri") or "") == own and chain.get("citoRelations"):
+            return {"source": "walk-chain", "citing": [],
+                    "pairs": [(_local(r), "") for r in chain["citoRelations"]]}
+    apex = view.get("apexCito") or {}
+    if apex and canonical_uri(apex.get("uri") or "") == canonical_uri(cito_uri):
+        return {"source": "walk-apex", "citing": [],
+                "pairs": [(_local(r), "") for r in apex.get("relations") or []]}
+    return {"source": "none", "citing": [], "pairs": []}
+
+
+def _quoted_paper(published: dict) -> str:
+    quote = published.get("01", "")
+    if not quote:
+        return ""
+    try:
+        return read_quoted_paper(fetch_trig(quote))
+    except Exception:  # noqa: BLE001 — PICO/PCC or unreadable: no quoted paper
+        return ""
+
+
+def _own_chain(published: dict, view: dict) -> dict | None:
+    own = canonical_uri(published.get("05", ""))
+    for chain in view["chains"]:
+        if own and canonical_uri(chain.get("outcomeUri") or "") == own:
+            return chain
+    # A walk that found exactly one chain and does not enumerate its Outcome
+    # under another URI is that chain.
+    if len(view["chains"]) == 1 and not view["chains"][0].get("outcomeUri"):
+        return view["chains"][0]
+    return None
+
+
+def _check_verdict_relation(published: dict, view: dict, own: dict,
+                            quoted_paper: str) -> list[dict]:
+    """The ledger's CiTO relation has to agree with the ledger's Outcome.
 
     `build_chain_draft.py` derives the relation from the verdict, so a mismatch
     means the two were published from different states — a chain claiming to
     confirm a paper it actually contradicted is the failure worth catching.
+
+    Only the ledger's own Outcome and CiTO are judged. Published work is a
+    network: other chains that cite the same paper turn up in the same walk,
+    and their citations say nothing about this one.
     """
+    chain = _own_chain(published, view)
+    if chain is None:
+        return [_row("warn", "verdict-relation",
+                     "the ledger's Outcome (step 05) was not enumerated by the walk, "
+                     "so its verdict could not be read — the CiTO relation was not "
+                     "cross-checked")]
+    verdict_label = chain.get("verdict") or ""
+    verdict = verdict_label.replace(" ", "").lower()
+    if not verdict:
+        return [_row("warn", "verdict-relation",
+                     "the ledger's Outcome carries no verdict — the CiTO relation "
+                     "was not cross-checked")]
+    if not own["pairs"]:
+        return [_row("warn", "verdict-relation",
+                     "the CiTO relations of step 06 could not be read — the "
+                     "verdict was not cross-checked")]
+
     out: list[dict] = []
-    single_chain = len(view["chains"]) == 1
-    for chain in view["chains"]:
-        verdict = (chain.get("verdict") or "").replace(" ", "").lower()
-        relations = chain.get("citoRelations") or []
-        # When this chain's CiTO sits at the apex of the constellation it is
-        # hoisted out of chains[].steps[] and its relations go with it, so an
-        # empty list here does not mean the chain has no citation.
-        if not relations and single_chain:
-            relations = apex_relations
-        if not verdict or not relations:
-            continue
-        expected = RELATION_FROM_VERDICT.get(verdict)
-        if expected is None:
-            out.append(_row("info", "verdict-relation",
-                            f"no expected CiTO relation is defined for verdict "
-                            f"{chain['verdict']!r}", verdict=chain["verdict"]))
-            continue
-        names = [r.rsplit("/", 1)[-1] for r in relations]
-        verdict_vocabulary = {v.rsplit("/", 1)[-1] for v in RELATION_FROM_VERDICT.values()}
-        if not verdict_vocabulary.intersection(names):
-            # The chain does not cite the target with a verdict-bearing relation
-            # at all — e.g. citesAsAuthority for a method paper, or
-            # citesAsDataSource. That is a different kind of citation, not a
-            # disagreement with the Outcome, so there is nothing to cross-check.
-            out.append(_row("info", "verdict-relation",
-                            f"cited with {', '.join(names)}, which asserts no "
-                            f"verdict on the cited work — no cross-check applies "
-                            f"(verdict is {chain['verdict']})",
-                            verdict=chain["verdict"], actual=relations))
-            continue
-        if expected.rsplit("/", 1)[-1] in names:
-            out.append(_row("pass", "verdict-relation",
-                            f"verdict {chain['verdict']} matches CiTO "
-                            f"{expected.rsplit('/', 1)[-1]}"))
-        else:
-            out.append(_row("fail", "verdict-relation",
-                            f"verdict {chain['verdict']} implies CiTO "
-                            f"{expected.rsplit('/', 1)[-1]}, but the chain cites "
-                            f"with {', '.join(names)} — the Outcome and the "
-                            f"Citation disagree about what this replication found",
-                            verdict=chain["verdict"], expected=expected,
-                            actual=relations))
-    return out
+    outcome = canonical_uri(published.get("05", ""))
+    if own["citing"] and outcome not in {canonical_uri(c) for c in own["citing"]}:
+        out.append(_row("warn", "cito-citing-work",
+                        f"step 06 cites from {', '.join(own['citing'])}, not from "
+                        f"this ledger's Outcome", citing=own["citing"]))
+
+    expected = RELATION_FROM_VERDICT.get(verdict)
+    if expected is None:
+        return out + [_row("info", "verdict-relation",
+                           f"no expected CiTO relation is defined for verdict "
+                           f"{verdict_label!r}", verdict=verdict_label)]
+
+    pairs = own["pairs"]
+    # Relations on a method paper, a dataset or a tutorial say nothing about the
+    # claim. When the Quote names the paper, judge the relations on that paper.
+    if quoted_paper and any(t for _r, t in pairs):
+        on_paper = [(r, t) for r, t in pairs if _norm_target(t) == _norm_target(quoted_paper)]
+        if not on_paper:
+            return out + [_row("warn", "verdict-relation",
+                               f"step 06 does not cite the quoted paper "
+                               f"{quoted_paper} — the verdict was not cross-checked",
+                               verdict=verdict_label, paper=quoted_paper,
+                               actual=[f"{r} {t}" for r, t in pairs])]
+        pairs = on_paper
+
+    names = sorted({r for r, _t in pairs})
+    verdict_vocabulary = {_local(v) for v in RELATION_FROM_VERDICT.values()}
+    if not verdict_vocabulary.intersection(names):
+        # The chain does not cite the target with a verdict-bearing relation
+        # at all — e.g. extends, citesAsAuthority, citesAsDataSource. That is a
+        # different kind of citation, not a disagreement with the Outcome.
+        return out + [_row("info", "verdict-relation",
+                           f"cited with {', '.join(names)}, which asserts no "
+                           f"verdict on the cited work — no cross-check applies "
+                           f"(verdict is {verdict_label})",
+                           verdict=verdict_label, actual=names)]
+    if _local(expected) in names:
+        return out + [_row("pass", "verdict-relation",
+                           f"verdict {verdict_label} matches CiTO {_local(expected)}")]
+    return out + [_row("fail", "verdict-relation",
+                       f"verdict {verdict_label} implies CiTO {_local(expected)}, "
+                       f"but the chain cites with {', '.join(names)} — the Outcome "
+                       f"and the Citation disagree about what this replication found",
+                       verdict=verdict_label, expected=expected, actual=names)]
 
 
-def _check_cited_targets(view: dict, mode: str) -> list[dict]:
+def _neighbour_context(published: dict, view: dict) -> list[dict]:
+    """Other chains the walk reached: context, never a pass or a fail."""
+    own = canonical_uri(published.get("05", ""))
+    others = [c for c in view["chains"]
+              if c.get("outcomeUri") and canonical_uri(c["outcomeUri"]) != own]
+    if not others:
+        return []
+    described = [f"{c['outcomeUri']} ({c.get('verdict') or 'no verdict'}"
+                 f"{'; ' + ', '.join(_local(r) for r in c['citoRelations']) if c.get('citoRelations') else ''})"
+                 for c in others]
+    return [_row("info", "neighbours",
+                 f"{len(others)} other chain(s) in this constellation are not in this "
+                 f"ledger and were not judged: {'; '.join(described)}",
+                 outcomes=[c["outcomeUri"] for c in others])]
+
+
+def _own_cited_paper(view: dict, own: dict, quoted_paper: str) -> dict:
+    """The work this chain is of, from its own CiTO (forrt-research-mcp#9).
+
+    Preference: the verdict relation's target that is the quoted paper, any
+    verdict relation's target, the quoted paper if cited at all, the first DOI.
+    Falls back to the walk's answer when the CiTO's targets are unknown.
+    """
+    reported = view["citedPaper"]
+    targets = [t for _r, t in own["pairs"] if t]
+    if not targets:
+        return reported
+    unique = list(dict.fromkeys(targets))
+    verdict_vocabulary = {_local(v) for v in RELATION_FROM_VERDICT.values()}
+    verdict_targets = [t for r, t in own["pairs"] if t and r in verdict_vocabulary]
+    quoted = [t for t in unique if quoted_paper and _norm_target(t) == _norm_target(quoted_paper)]
+    if quoted and quoted[0] in verdict_targets:
+        doi, selected_by = quoted[0], "verdict-relation-on-quoted-paper"
+    elif verdict_targets:
+        doi, selected_by = verdict_targets[0], "verdict-relation"
+    elif quoted:
+        doi, selected_by = quoted[0], "quoted-paper"
+    else:
+        dois = [t for t in unique if _looks_like_doi(t)]
+        doi, selected_by = (dois or unique)[0], "first-doi" if dois else "first-target"
+    reported_doi = reported.get("reportedPaperDoi") or ""
+    return {
+        "doi": doi,
+        "allCitedTargets": unique,
+        "source": own["source"],
+        "selectedBy": selected_by,
+        "reportedPaperDoi": reported_doi,
+        "disagreesWithReported": bool(reported_doi)
+        and _norm_target(reported_doi) != _norm_target(doi),
+    }
+
+
+def _check_cited_targets(paper: dict, mode: str) -> list[dict]:
     """Everything the chain cites must exist.
 
     A CiTO target is not always a DOI. A chain may credit a software repository
@@ -254,7 +443,6 @@ def _check_cited_targets(view: dict, mode: str) -> list[dict]:
     `github.com/GRID4EARTH/healpix-analyse` — so treating every target as a DOI
     reports a correctly published chain as broken.
     """
-    paper = view["citedPaper"]
     targets = paper.get("allCitedTargets") or ([paper["doi"]] if paper["doi"] else [])
     if not targets:
         if mode == "new_research":
@@ -421,9 +609,13 @@ def verify_chain(published_path: str, repo_url: str = "", mode: str = "auto") ->
         rows.append(_check_reachable(step, uri, in_constellation))
 
     rows += _check_repository(view, published, repo_url)
-    apex_relations = (view["apexCito"] or {}).get("relations", [])
-    rows += _check_verdict_relation(view, apex_relations)
-    rows += _check_cited_targets(view, resolved_mode)
+    own = _own_citation(published, view)
+    quoted_paper = _quoted_paper(published) if own["pairs"] else ""
+    if "06" in published:
+        rows += _check_verdict_relation(published, view, own, quoted_paper)
+    rows += _neighbour_context(published, view)
+    cited_paper = _own_cited_paper(view, own, quoted_paper)
+    rows += _check_cited_targets(cited_paper, resolved_mode)
 
     counts = {s: sum(1 for r in rows if r["status"] == s)
               for s in ("pass", "fail", "warn", "skip", "info")}
@@ -431,7 +623,7 @@ def verify_chain(published_path: str, repo_url: str = "", mode: str = "auto") ->
         "ledger": str(path),
         "mode": resolved_mode,
         "stepsPublished": sorted(published),
-        "citedPaper": view["citedPaper"],
+        "citedPaper": cited_paper,
         "green": counts["fail"] == 0,
         "counts": counts,
         "rows": sorted(rows, key=lambda r: ("fail", "warn", "skip", "info", "pass")

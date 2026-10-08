@@ -352,7 +352,11 @@ def verify_chain(published_path: str, repo_url: str = "", mode: str = "auto") ->
         implies confirms, PartiallySupported implies qualifies, Contradicted
         implies disputes. A mismatch means the Outcome and the Citation
         disagree about what the replication found, which is the failure most
-        worth catching before anyone reads the chain.
+        worth catching before anyone reads the chain. Only the ledger's own
+        Outcome and CiTO are judged: the relation→target pairs come from the
+        step-06 TriG, and the relation that counts is the one on the paper the
+        Quote quotes. Other chains the walk reached (several chains often cite
+        the same paper) are listed as `neighbours`, never judged.
 
     A step reported as "not enumerated by the walk but its TriG resolves" is
     fine, not a warning: the constellation legitimately stops short of Quote,
