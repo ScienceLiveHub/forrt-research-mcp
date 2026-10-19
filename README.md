@@ -383,7 +383,8 @@ Makes a published typed citation ("this replication *confirms* that paper")
 visible in Wikidata and Scholia. Wikidata already models CiTO: "cites work"
 (P2860) with the qualifier "has goal" (P3712) set to one of 48 citation-intent
 items, each of which has an exact match (P2888) to its CiTO URI — so the
-mapping is read from Wikidata, with a vendored snapshot for offline use. The
+mapping is read from Wikidata at run time, never copied here (a copy would go
+stale without saying so; if Wikidata cannot be reached the tool says so). The
 statement is referenced with "nanopublication identifier" (P12545) in the
 `https://w3id.org/np/<id>` form, which Scholia counts as an annotation defined
 in a nanopublication.

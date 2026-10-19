@@ -32,7 +32,6 @@ import datetime
 import json
 import sys
 import urllib.parse
-from importlib import resources
 from pathlib import Path
 
 from rdflib import Dataset, URIRef
@@ -45,7 +44,6 @@ CITO = "http://purl.org/spar/cito/"
 NP = "http://www.nanopub.org/nschema#"
 SL = "https://w3id.org/sciencelive/o/terms/"
 WIKIDATA_API = "https://www.wikidata.org/w/api.php"
-WIKIDATA_SPARQL = "https://query.wikidata.org/sparql"
 ZENODO_API = "https://zenodo.org/api/records/"
 
 CITATION_INTENT = "Q96471816"
@@ -82,22 +80,35 @@ def _assertion(uri: str) -> list[tuple[str, str, str]]:
     return [(str(s), str(p), str(o)) for s, p, o in ds.graph(graph_name)]
 
 
-def _vendored_intents() -> dict[str, str]:
-    path = resources.files("forrt_research_mcp") / "data" / "cito-wikidata-intents.json"
-    return json.loads(path.read_text(encoding="utf-8"))["intents"]
-
-
 def _intents() -> dict[str, str]:
-    """CiTO URI -> intent QID, live from Wikidata; the vendored snapshot if offline."""
-    query = (f"SELECT ?i ?m WHERE {{ ?i wdt:P31 wd:{CITATION_INTENT} . "
-             f"?i wdt:P2888|wdt:P1709 ?m }}")
-    data = _json(WIKIDATA_SPARQL, {"query": query, "format": "json"})
-    if not data:
-        return _vendored_intents()
-    live = {b["m"]["value"]: b["i"]["value"].rsplit("/", 1)[-1]
-            for b in data["results"]["bindings"]
-            if b["m"]["value"].startswith(CITO)}
-    return live or _vendored_intents()
+    """CiTO URI -> citation-intent QID, read from Wikidata at run time.
+
+    Wikidata is the authority for this mapping (each intent item carries an
+    exact match, P2888, to its CiTO URI), so it is not copied here: a copy
+    would go stale without saying so. Read through the main API rather than
+    the query service, which times out more often.
+    """
+    qids: list[str] = []
+    offset: int | None = 0
+    while offset is not None:  # follow `continue`: the search pages its results
+        search = _json(WIKIDATA_API, {"action": "query", "list": "search", "format": "json",
+                                      "srlimit": "500", "sroffset": str(offset),
+                                      "srsearch": f"haswbstatement:P31={CITATION_INTENT}"})
+        qids += [h["title"] for h in (search or {}).get("query", {}).get("search", [])]
+        offset = ((search or {}).get("continue") or {}).get("sroffset")
+    mapping: dict[str, str] = {}
+    for start in range(0, len(qids), 50):  # wbgetentities takes at most 50 ids
+        data = _json(WIKIDATA_API, {"action": "wbgetentities", "format": "json",
+                                    "props": "claims", "ids": "|".join(qids[start:start + 50])})
+        for qid, entity in ((data or {}).get("entities") or {}).items():
+            for prop in ("P2888", "P1709"):
+                for claim in entity.get("claims", {}).get(prop, []):
+                    uri = (claim.get("mainsnak", {}).get("datavalue") or {}).get("value", "")
+                    if isinstance(uri, str) and uri.startswith(CITO):
+                        mapping[uri] = qid
+    if not mapping:
+        raise ApiError("could not read the CiTO citation-intent items from Wikidata")
+    return mapping
 
 
 def _find(prop: str, value: str) -> list[str]:

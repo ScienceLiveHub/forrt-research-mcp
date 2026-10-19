@@ -20,6 +20,12 @@ CITO_NP = "https://w3id.org/sciencelive/np/RApCQTLMP8h0jDYF9ggWU6lMTW7a_KG5_Jygb
 OUTCOME_NP = "https://w3id.org/sciencelive/np/RAIylrhtnfTH_vtp1nTDVAiGsv2u_Ea4Uvh35DrGySuWs"
 SOROYE = "Q89582023"
 CONFIRMS = "Q96480427"
+# What Wikidata answers for the relations under test (each intent item's P2888).
+INTENTS = {
+    "http://purl.org/spar/cito/confirms": CONFIRMS,
+    "http://purl.org/spar/cito/qualifies": "Q117121930",
+    "http://purl.org/spar/cito/disputes": "Q117121923",
+}
 
 
 def zenodo_record() -> dict:
@@ -43,7 +49,7 @@ def offline(monkeypatch):
     items = {("P356", "10.1126/SCIENCE.AAX8591"): [SOROYE]}
     claims: dict[str, dict] = {}
     monkeypatch.setattr(W, "fetch_trig", fetch_trig)
-    monkeypatch.setattr(W, "_intents", W._vendored_intents)
+    monkeypatch.setattr(W, "_intents", lambda: dict(INTENTS))
     monkeypatch.setattr(W, "_zenodo",
                         lambda doi: zenodo_record() if doi.lower().startswith("10.5281/zenodo.19") else None)
     monkeypatch.setattr(W, "_find", lambda prop, value: items.get((prop, value), []))
@@ -125,12 +131,29 @@ class TestHelpers:
     def test_display_name(self, given, expected):
         assert W._display_name(given) == expected
 
-    def test_vendored_intents_map_the_forrt_verdict_relations(self):
-        intents = W._vendored_intents()
-        assert intents[W.CITO + "confirms"] == CONFIRMS
-        assert intents[W.CITO + "qualifies"] == "Q117121930"
-        assert intents[W.CITO + "disputes"] == "Q117121923"
-        assert intents[W.CITO + "credits"] == "Q117121919"
+    def test_intents_are_read_from_each_items_exact_match(self, monkeypatch):
+        """Recorded shape of the two Wikidata API answers: the search for
+        citation-intent items, then their claims."""
+        def fake_json(url, params=None):
+            # Two pages: the search pages its results, and stopping after the
+            # first page once silently turned 'confirms' into a plain citation.
+            if params.get("list") == "search" and params["sroffset"] == "0":
+                return {"continue": {"sroffset": 1}, "query": {"search": [{"title": CONFIRMS}]}}
+            if params.get("list") == "search":
+                return {"query": {"search": [{"title": "Q117121919"}]}}
+            return {"entities": {
+                CONFIRMS: {"claims": {"P2888": [{"mainsnak": {"datavalue": {
+                    "value": "http://purl.org/spar/cito/confirms"}}}]}},
+                "Q117121919": {"claims": {"P2888": [{"mainsnak": {"datavalue": {
+                    "value": "http://purl.org/spar/cito/credits"}}}]}},
+            }}
+        monkeypatch.setattr(W, "_json", fake_json)
+        assert W._intents() == {W.CITO + "confirms": CONFIRMS, W.CITO + "credits": "Q117121919"}
+
+    def test_unreachable_wikidata_fails_loudly_rather_than_guessing(self, monkeypatch):
+        monkeypatch.setattr(W, "_json", lambda url, params=None: None)
+        with pytest.raises(W.ApiError):
+            W._intents()
 
     def test_published_ledger_yields_only_cito_nanopubs(self, offline, tmp_path):
         ledger = tmp_path / "PUBLISHED.md"
