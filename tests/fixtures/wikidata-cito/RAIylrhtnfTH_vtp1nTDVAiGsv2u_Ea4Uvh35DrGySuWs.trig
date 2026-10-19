@@ -1,0 +1,56 @@
+@prefix this: <https://w3id.org/sciencelive/np/RAIylrhtnfTH_vtp1nTDVAiGsv2u_Ea4Uvh35DrGySuWs> .
+@prefix sub: <https://w3id.org/sciencelive/np/RAIylrhtnfTH_vtp1nTDVAiGsv2u_Ea4Uvh35DrGySuWs/> .
+@prefix np: <http://www.nanopub.org/nschema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix npx: <http://purl.org/nanopub/x/> .
+@prefix dc: <http://purl.org/dc/terms/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+sub:Head {
+  this: a np:Nanopublication;
+    np:hasAssertion sub:assertion;
+    np:hasProvenance sub:provenance;
+    np:hasPublicationInfo sub:pubinfo .
+}
+
+sub:assertion {
+  sub:soroye-iberia-replication-phase3-outcome a <https://w3id.org/sciencelive/o/terms/FORRT-Replication-Outcome>;
+    <http://schema.org/endDate> "2026-04-24"^^xsd:date;
+    <http://www.w3.org/2000/01/rdf-schema#label> "Soroye 2020 thermal-exposure → extirpation claim replicates regionally on the Iberian Peninsula with a stronger effect than the continental mean";
+    <https://w3id.org/sciencelive/o/terms/hasConclusionDescription> "Applying the Python re-implementation of Soroye et al. 2020's pipeline to an independent regional dataset of 36,560 Bombus occurrence records from the Iberian Peninsula confirms the headline thermal-exposure → extirpation relationship: the standardised TEI-delta coefficient is positive, large, and highly significant in both a plain logistic regression and a mixed-effects model with species random effect. The Iberian coefficient (+0.48) is approximately three times larger in magnitude than the continental mean recovered in Phase 2 (+0.15), consistent with the prediction that species reaching their warm range limit (as many Bombus species do on the Iberian Peninsula) are particularly vulnerable to increasing thermal exposure. The claim therefore replicates regionally and with a stronger effect than the continental mean.";
+    <https://w3id.org/sciencelive/o/terms/hasConfidenceLevel> <https://w3id.org/sciencelive/o/terms/HighConfidence>;
+    <https://w3id.org/sciencelive/o/terms/hasEvidenceDescription> "Mixed-effects logistic GLMM (statsmodels.BinomialBayesMixedGLM, variational Bayes) on 528 species × cell observations across 31 Bombus species and 99 sampled cells in Spain and Portugal yielded sc_TEI_delta = +0.4792 with 95% credible interval [0.266, 0.693], unambiguously positive. A plain logistic regression on the same data gave sc_TEI_delta = +0.2943 (p = 0.007). The hot-edge baseline coefficient sc_TEI_bs is also positive and highly significant (+0.61, p < 0.001), consistent with Soroye's prediction that species near their warm range limit are more vulnerable. Overall extirpation rate in the Iberian analysis subset was 35.6%.   ";
+    <https://w3id.org/sciencelive/o/terms/hasLimitationsDescription> """(i) The Iberian analysis subset is small (528 species × cell observations after applying Soroye's filters), so credible intervals on individual coefficients are
+  wider than on the continental Phase 2 dataset; the effect-size estimate (+0.48) should be interpreted with this in mind.                                       
+(ii) Variational Bayes posterior may underestimate credible-interval width by approximately 10–20% relative to full MCMC.                                  
+(iii) The hot-edge × thermal-change interaction (sc_TEI_bs × sc_TEI_delta) is positive but not significant on the Iberian subset (+0.03), in contrast to its
+  significant magnitude on the continental Phase 2 dataset; this likely reflects the smaller sample size and narrower thermal range covered by the Iberian cells.                                                                
+(iv) GBIF Iberian Bombus coverage before approximately 1920 is sparse, which reduces the temporal span of the effective baseline window relative to Soroye's continental dataset.   """;
+    <https://w3id.org/sciencelive/o/terms/hasOutcomeRepository> <https://doi.org/10.5281/zenodo.19762723>;
+    <https://w3id.org/sciencelive/o/terms/hasValidationStatus> <https://w3id.org/sciencelive/o/terms/Validated>;
+    <https://w3id.org/sciencelive/o/terms/isOutcomeOf> <https://w3id.org/sciencelive/np/RA51YMjEluCKKQWWIuB9_SBU88dgCaonVuqtS4CspPiUE/soroye-iberia-replication-phase3> .
+}
+
+sub:provenance {
+  sub:assertion prov:wasAttributedTo <https://orcid.org/0000-0002-1784-2920> .
+}
+
+sub:pubinfo {
+  <https://orcid.org/0000-0002-1784-2920> <http://xmlns.com/foaf/0.1/name> "Anne Fouilloux" .
+  
+  this: dc:created "2026-04-25T13:06:18.578Z"^^xsd:dateTime;
+    dc:creator <https://orcid.org/0000-0002-1784-2920>;
+    dc:license <https://creativecommons.org/licenses/by/4.0/>;
+    npx:introduces sub:soroye-iberia-replication-phase3-outcome;
+    npx:wasCreatedAt <https://platform.sciencelive4all.org>;
+    <http://www.w3.org/2000/01/rdf-schema#label> "NP created using Declaring a replication study outcome according to FORRT";
+    <https://w3id.org/np/o/ntemplate/wasCreatedFromTemplate> <https://w3id.org/np/RA2zljn0Nw9SadppOyxZoh-_Rxosslrq-vYG-p9SttnJE> .
+  
+  sub:sig npx:hasAlgorithm "RSA";
+    npx:hasPublicKey "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAoDcOiD+jen8awiJ6DB2ewDw66PeG64hODmgNFwy7GrwQui4HKnHdvxd++1UhTgiOfycxyxBb7sXPSikLw/1TsSyPsEl0P3/+600szxpTGgLNzW+bZ2DVP3d8ERMV1aWpH0ci3B/5vmK+vXQZ4uCoq57NE0MiFg5c13Gy0gd6n7wZYEhYM4AjWSLL0QS/HY+TFZMYL9bCFeATennGrlB2UEjRlw21UB2Ah16ZZ6hxQlfctFJZE7TGnBJPB3ttTjfcOfamhjZVwQ0yV9mv7x6PGiSmkzpJTVLjn8hagoKT05YUwVQArFb+w7f6sXqvvljMigjd/Rbqgbye/lLUAZLfJSnFM58TubfpEJvXV4zNMDEoT3VQ7dokgoLgMrmjZCKATtQ7gomocoTJ1NhN2esRNtGzWaS2obL/mueUQlMlavssZnqL8WICkdAuDlwDVNbsbwEWKQ50kiPdAdduSigifxA4CM7TgvnxqZVoAResEGP6UhTTem3T4CsbEas1Caj9wa7M1jPjACu5LF5BwcVns3ZQHWLipjRjD+9/ur3G8QtuxbNhmXlDYQ6tXxB1lK+Oz7O519b3bA15ilzFl0SdvMBGTe46xaQ9DsJT18THKnPbUhNMy0dH0VtzpB+EEaXZ25Fp9VHMEUqo1lLS9e89eO3efiqkESKQ7wmB+/DlIRcCAwEAAQ==";
+    npx:hasSignature "C6Nzak1OV1Vxh1VO6+icqK3E7+7UpqoRRJDAQIqMYboyiGdSxp+YbSUcX+YdcG4WsJsbkS26n5HOwhQ7gICPXPilw8/lYuIcD4mbGBXFYFUcnTlNxSdrqWsN63av1/yD6P8HaICpog31NQNoIz9axwkRbasmft5ozkT/2sTVG5D7xc1UGgD7X4+poUwBHNxTKqWz5wYcoQSH8wCZkaYIQB+vCjOCH72KYbwPPa8PHZ3ycPJg6KbUuquFhNcacCWsQM2CLrGbUBbvU+6/wdRDnzoebN7eUoDpcDzh8fhPYd+hl4zE6zI3tZSSyUBo5D9+euBLTZmnu7C+3IDR29ihC0W8OmabAMXY3g+e2LDjEahqTBob7WjbatCV2WLQ8IIinfYWg7cWjQ6aCU79nh1ItNvxR0XNan/zqYHsYhmlrsAjoeA8vnu21OmCx5dnajPEnkCzjFNTkPrih+TXzUVzxM+Zbm859kvZ/G0N8nFmekfS6HiyPwBLgpvWZFfEiCqqYbUpIY+hw22vjouwMoXgZzLVVs01nvntxQAGV9cBEw8dEuLWDBJ0OYzuTloaDMiMrwOVtd5LdXKL1e1Dho+MJ3+HnB4sjQBNBP+I/PBKGWdm/KbdsBXCFoRixKEcd5aTsuVdeHFms6kMC5KlV3atRZR9AE8vM72r+mSdmZwDvRo=";
+    npx:hasSignatureTarget this:;
+    npx:signedBy <https://orcid.org/0000-0002-1784-2920> .
+}
+
