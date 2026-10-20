@@ -97,8 +97,8 @@ class TestNewReplication:
         result = W.wikidata_cito([CITO_NP])
         qs = lines(result)
         assert any(l.startswith('LAST\tLen\t"Soroye 2020 thermal-exposure') for l in qs)
-        # The title statement keeps the deposit's real title; only the label changes.
-        assert any(l.startswith('LAST\tP1476\ten:"10.1371-journal.pgph.0001995"') for l in qs)
+        # A repository name is not a title (Wikidata's edit filter flags it as nonsense).
+        assert not any(l.startswith("LAST\tP1476") for l in qs)
         assert "repository name" in result["works"][0]["note"]
 
     def test_author_without_an_item_becomes_a_name_string_in_display_order(self, offline):

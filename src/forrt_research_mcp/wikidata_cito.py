@@ -318,11 +318,13 @@ def wikidata_cito(cito_uris: list[str], today: str = "") -> dict:
             title = meta["title"]
             # A deposit named after its repository ("my-replication-repo") makes a
             # useless label; the Outcome nanopub's own label says what was done.
-            # The title statement (P1476) stays the deposit's real title.
+            # Nor is such a name a title: Wikidata's edit filter flags it as
+            # "possible vandalism by adding nonsense", so no title statement then.
             label = work["labels"][0] if _is_slug(title) and work["labels"] else title
             if label != title:
                 entry["title"] = label
-                entry["note"] = f"Zenodo title {title!r} looks like a repository name; label taken from the Outcome nanopublication"
+                entry["note"] = (f"Zenodo title {title!r} looks like a repository name: label taken from the "
+                                 f"Outcome nanopublication, no title statement (fix the title on Zenodo)")
             # Wikidata is a secondary knowledge base: every statement cites where it
             # comes from. Here that is the Zenodo record the facts were read from.
             record = sorted(work["versions"])[-1].rsplit(".", 1)[-1]
@@ -336,9 +338,10 @@ def wikidata_cito(cito_uris: list[str], today: str = "") -> dict:
             lines += ["CREATE",
                       f"LAST\tLen\t{_q(label[:250])}",
                       f"LAST\tDen\t{_q(description)}",
-                      f"LAST\tP31\t{ZENODO_CLASS.get(meta['type'], DEFAULT_CLASS)}{source}",
-                      f"LAST\tP1476\ten:{_q(title)}{source}",
-                      f"LAST\tP356\t{_q(key)}{source}"]
+                      f"LAST\tP31\t{ZENODO_CLASS.get(meta['type'], DEFAULT_CLASS)}{source}"]
+            if not _is_slug(title):
+                lines.append(f"LAST\tP1476\ten:{_q(title)}{source}")
+            lines.append(f"LAST\tP356\t{_q(key)}{source}")
             if meta["date"]:
                 lines.append(f"LAST\tP577\t{_date(meta['date'])}{source}")
             for n, creator in enumerate(meta["creators"], 1):
