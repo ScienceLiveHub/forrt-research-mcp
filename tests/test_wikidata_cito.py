@@ -71,6 +71,7 @@ class TestNewReplication:
         assert any(l.startswith("LAST\tP31\tQ7397\tS854") for l in qs)  # Zenodo software, sourced
         assert ('LAST\tP2860\tQ89582023\tP3712\tQ96480427'
                 '\tS12545\t"https://w3id.org/np/RApCQTLMP8h0jDYF9ggWU6lMTW7a_KG5_Jygbsx0aTpIo"'
+                '\tS577\t+2026-04-25T00:00:00Z/11'  # the nanopub's own publication date
                 '\tS813\t+2026-10-19T00:00:00Z/11') in qs
 
     def test_reference_and_outcome_link_use_the_form_scholia_counts(self, offline):

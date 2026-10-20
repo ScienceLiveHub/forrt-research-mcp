@@ -46,6 +46,8 @@ NP = "http://www.nanopub.org/nschema#"
 SL = "https://w3id.org/sciencelive/o/terms/"
 RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label"
 RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+DCT_CREATED = "http://purl.org/dc/terms/created"
+DC_CREATED = "http://purl.org/dc/elements/1.1/created"
 # The FORRT study type says which kind of work this is; the description says the same.
 STUDY_KIND = {
     SL + "Reproduction-Study": "reproduction study",
@@ -89,6 +91,22 @@ def _assertion(uri: str) -> list[tuple[str, str, str]]:
     if graph_name is None:
         return []
     return [(str(s), str(p), str(o)) for s, p, o in ds.graph(graph_name)]
+
+
+def _published(uri: str) -> str:
+    """The nanopublication's own creation date (YYYY-MM-DD), from its pubinfo."""
+    ds = Dataset()
+    ds.parse(data=fetch_trig(uri), format="trig")
+    for g in ds.graphs():
+        for s, p, o in g:
+            if str(p) in (DCT_CREATED, DC_CREATED) and np_key(str(s)) == np_key(uri):
+                return str(o)[:10]
+    return ""
+
+
+def np_key(uri: str) -> str:
+    match = _NP_ID.search(uri or "")
+    return match.group(0) if match else ""
 
 
 def _intents() -> dict[str, str]:
@@ -275,7 +293,8 @@ def wikidata_cito(cito_uris: list[str], today: str = "") -> dict:
                 if outcome_kind and outcome_kind not in work["kinds"]:
                     work["kinds"].append(outcome_kind)
             work["citations"].append({"cited_doi": cited_doi, "cito": predicate,
-                                      "intent": intents.get(predicate), "nanopub": cito_uri})
+                                      "intent": intents.get(predicate), "nanopub": cito_uri,
+                                      "published": _published(cito_uri)})
 
     lines: list[str] = []
     report: list[dict] = []
@@ -355,7 +374,12 @@ def wikidata_cito(cito_uris: list[str], today: str = "") -> dict:
                 line += f"\tP3712\t{citation['intent']}"
             elif relation != "cites":
                 skipped.append(f"{work['doi']}: no Wikidata intent for cito:{relation}; added as plain 'cites work'")
-            line += f"\tS12545\t{_q(_np_url(citation['nanopub']))}\tS813\t{_date(today)}"
+            # Same reference shape as existing nanopublication-backed citations:
+            # identifier, the nanopublication's publication date, retrieved.
+            line += f"\tS12545\t{_q(_np_url(citation['nanopub']))}"
+            if citation["published"]:
+                line += f"\tS577\t{_date(citation['published'])}"
+            line += f"\tS813\t{_date(today)}"
             lines.append(line)
             entry["citations"].append({"cited": cited[0], "cited_doi": cited_doi, "relation": relation,
                                        "intent": citation["intent"], "nanopub": _np_url(citation["nanopub"]),
