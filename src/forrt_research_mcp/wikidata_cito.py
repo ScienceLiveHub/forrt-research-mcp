@@ -30,6 +30,7 @@ from __future__ import annotations
 import argparse
 import datetime
 import json
+import re
 import sys
 import urllib.parse
 from pathlib import Path
@@ -44,6 +45,15 @@ CITO = "http://purl.org/spar/cito/"
 NP = "http://www.nanopub.org/nschema#"
 SL = "https://w3id.org/sciencelive/o/terms/"
 RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label"
+RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+# The FORRT study type says which kind of work this is; the description says the same.
+STUDY_KIND = {
+    SL + "Reproduction-Study": "reproduction study",
+    SL + "Replication-Study": "replication study",
+    SL + "Reproduction-Replication-Study": "reproduction and replication study",
+}
+DEFAULT_KIND = "reproduction or replication study"
+_NP_ID = re.compile(r"RA[A-Za-z0-9_-]{43}")
 WIKIDATA_API = "https://www.wikidata.org/w/api.php"
 ZENODO_API = "https://zenodo.org/api/records/"
 
@@ -167,6 +177,19 @@ def _np_url(uri: str) -> str:
     return canonical_uri(uri).replace("http://purl.org/np/", "https://w3id.org/np/")
 
 
+def _study_kind(study_uri: str) -> str:
+    """'reproduction study', 'replication study', ... from the FORRT study's own type."""
+    match = _NP_ID.search(study_uri or "")
+    if not match:
+        return ""
+    try:
+        triples = _assertion(f"https://w3id.org/np/{match.group(0)}")
+    except ApiError:
+        return ""
+    types = {o for _, p, o in triples if p == RDF_TYPE}
+    return next((kind for cls, kind in STUDY_KIND.items() if cls in types), "")
+
+
 def _is_slug(title: str) -> bool:
     """A repository-style name rather than a title: no spaces at all."""
     return bool(title) and not any(c.isspace() for c in title.strip())
@@ -229,6 +252,8 @@ def wikidata_cito(cito_uris: list[str], today: str = "") -> dict:
                 repo = next((o for _, p, o in outcome_triples
                              if p == SL + "hasOutcomeRepository"), "")
                 outcome_label = next((o for _, p, o in outcome_triples if p == RDFS_LABEL), "")
+                study = next((o for _, p, o in outcome_triples if p == SL + "isOutcomeOf"), "")
+                outcome_kind = _study_kind(study)
                 citing_doi = _doi(repo)
                 if citing_doi is None:
                     skipped.append(f"{cito_uri}: the outcome repository is not a DOI ({repo or 'none'})")
@@ -241,12 +266,14 @@ def wikidata_cito(cito_uris: list[str], today: str = "") -> dict:
             work_doi = meta["concept_doi"] if meta else citing_doi
             work = works.setdefault(work_doi.upper(), {
                 "doi": work_doi, "versions": set(), "meta": meta,
-                "outcomes": set(), "labels": [], "citations": []})
+                "outcomes": set(), "labels": [], "kinds": [], "citations": []})
             work["versions"].add(citing_doi)
             if outcome:
                 work["outcomes"].add(outcome)
                 if outcome_label and outcome_label not in work["labels"]:
                     work["labels"].append(outcome_label)
+                if outcome_kind and outcome_kind not in work["kinds"]:
+                    work["kinds"].append(outcome_kind)
             work["citations"].append({"cited_doi": cited_doi, "cito": predicate,
                                       "intent": intents.get(predicate), "nanopub": cito_uri})
 
@@ -284,8 +311,9 @@ def wikidata_cito(cito_uris: list[str], today: str = "") -> dict:
             # Descriptions are short prose, not a place for identifiers; the DOI is
             # a statement (P356). Year and first author keep same-label items apart.
             first = meta["creators"][0]["name"] if meta["creators"] else ""
-            description = (f"reproduction or replication study by {first} ({meta['date'][:4]})"
-                           if first else f"reproduction or replication study ({meta['date'][:4]})")
+            kind = work["kinds"][0] if len(work["kinds"]) == 1 else DEFAULT_KIND
+            description = (f"{kind} by {first} ({meta['date'][:4]})"
+                           if first else f"{kind} ({meta['date'][:4]})")
             lines += ["CREATE",
                       f"LAST\tLen\t{_q(label[:250])}",
                       f"LAST\tDen\t{_q(description)}",

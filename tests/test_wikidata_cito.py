@@ -80,7 +80,8 @@ class TestNewReplication:
 
     def test_description_carries_the_doi_so_same_title_replications_do_not_collide(self, offline):
         qs = lines(W.wikidata_cito([CITO_NP]))
-        assert 'LAST\tDen\t"reproduction or replication study by Anne Fouilloux (2026)"' in qs
+        # The FORRT study behind this outcome is typed Replication-Study.
+        assert 'LAST\tDen\t"replication study by Anne Fouilloux (2026)"' in qs
 
     def test_every_fact_about_the_new_item_cites_its_zenodo_record(self, offline):
         qs = lines(W.wikidata_cito([CITO_NP], today="2026-10-20"))
