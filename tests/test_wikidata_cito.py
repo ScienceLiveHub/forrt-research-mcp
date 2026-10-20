@@ -67,8 +67,8 @@ class TestNewReplication:
         qs = lines(result)
         assert qs.count("CREATE") == 1
         # One item per work: the concept DOI, not the version the outcome cites.
-        assert 'LAST\tP356\t"10.5281/ZENODO.19756173"' in qs
-        assert "LAST\tP31\tQ7397" in qs  # Zenodo software
+        assert any(l.startswith('LAST\tP356\t"10.5281/ZENODO.19756173"') for l in qs)
+        assert any(l.startswith("LAST\tP31\tQ7397\tS854") for l in qs)  # Zenodo software, sourced
         assert ('LAST\tP2860\tQ89582023\tP3712\tQ96480427'
                 '\tS12545\t"https://w3id.org/np/RApCQTLMP8h0jDYF9ggWU6lMTW7a_KG5_Jygbsx0aTpIo"'
                 '\tS813\t+2026-10-19T00:00:00Z/11') in qs
@@ -80,7 +80,14 @@ class TestNewReplication:
 
     def test_description_carries_the_doi_so_same_title_replications_do_not_collide(self, offline):
         qs = lines(W.wikidata_cito([CITO_NP]))
-        assert 'LAST\tDen\t"reproduction or replication study (2026), Zenodo 10.5281/zenodo.19756173"' in qs
+        assert 'LAST\tDen\t"reproduction or replication study by Anne Fouilloux (2026)"' in qs
+
+    def test_every_fact_about_the_new_item_cites_its_zenodo_record(self, offline):
+        qs = lines(W.wikidata_cito([CITO_NP], today="2026-10-20"))
+        ref = '\tS854\t"https://zenodo.org/records/19762723"\tS813\t+2026-10-20T00:00:00Z/11'
+        facts = [l for l in qs if l.startswith(("LAST\tP31", "LAST\tP1476", "LAST\tP356",
+                                                "LAST\tP577", "LAST\tP2093", "LAST\tP50"))]
+        assert facts and all(l.endswith(ref) for l in facts)
 
     def test_repository_slug_title_is_replaced_by_the_outcome_label(self, offline, monkeypatch):
         slug = dict(zenodo_record(), title="10.1371-journal.pgph.0001995")
@@ -89,17 +96,17 @@ class TestNewReplication:
         qs = lines(result)
         assert any(l.startswith('LAST\tLen\t"Soroye 2020 thermal-exposure') for l in qs)
         # The title statement keeps the deposit's real title; only the label changes.
-        assert 'LAST\tP1476\ten:"10.1371-journal.pgph.0001995"' in qs
+        assert any(l.startswith('LAST\tP1476\ten:"10.1371-journal.pgph.0001995"') for l in qs)
         assert "repository name" in result["works"][0]["note"]
 
     def test_author_without_an_item_becomes_a_name_string_in_display_order(self, offline):
         qs = lines(W.wikidata_cito([CITO_NP]))
-        assert 'LAST\tP2093\t"Anne Fouilloux"\tP1545\t"1"' in qs
+        assert any(l.startswith('LAST\tP2093\t"Anne Fouilloux"\tP1545\t"1"') for l in qs)
 
     def test_author_with_an_item_is_linked_by_orcid(self, offline):
         offline["items"][("P496", "0000-0002-1784-2920")] = ["Q999"]
         qs = lines(W.wikidata_cito([CITO_NP]))
-        assert 'LAST\tP50\tQ999\tP1545\t"1"' in qs
+        assert any(l.startswith('LAST\tP50\tQ999\tP1545\t"1"') for l in qs)
 
 
 class TestNoDuplicates:

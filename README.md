@@ -405,8 +405,11 @@ What it guarantees:
   two versions of one deposit do not become two replications;
 - idempotent: citations already in Wikidata are skipped; a citation to a work
   created by the same batch is listed as `pending` and added on the next run;
-- the description carries the DOI, because Wikidata refuses two items with the
-  same label and description.
+- every fact on a new item (type, title, DOI, date, authors) cites the Zenodo
+  record it was read from: Wikidata is a secondary knowledge base, and the citation
+  itself cites its nanopublication;
+- the description is short prose ("reproduction or replication study by <first
+  author> (<year>)"), keeping identifiers in statements where they belong.
 
 Items are created from the Zenodo record's title: fix a repository-slug title on
 Zenodo before submitting.

@@ -277,21 +277,29 @@ def wikidata_cito(cito_uris: list[str], today: str = "") -> dict:
             if label != title:
                 entry["title"] = label
                 entry["note"] = f"Zenodo title {title!r} looks like a repository name; label taken from the Outcome nanopublication"
-            description = f"reproduction or replication study ({meta['date'][:4]}), Zenodo {work['doi']}"
+            # Wikidata is a secondary knowledge base: every statement cites where it
+            # comes from. Here that is the Zenodo record the facts were read from.
+            record = sorted(work["versions"])[-1].rsplit(".", 1)[-1]
+            source = f"\tS854\t{_q(f'https://zenodo.org/records/{record}')}\tS813\t{_date(today)}"
+            # Descriptions are short prose, not a place for identifiers; the DOI is
+            # a statement (P356). Year and first author keep same-label items apart.
+            first = meta["creators"][0]["name"] if meta["creators"] else ""
+            description = (f"reproduction or replication study by {first} ({meta['date'][:4]})"
+                           if first else f"reproduction or replication study ({meta['date'][:4]})")
             lines += ["CREATE",
                       f"LAST\tLen\t{_q(label[:250])}",
                       f"LAST\tDen\t{_q(description)}",
-                      f"LAST\tP31\t{ZENODO_CLASS.get(meta['type'], DEFAULT_CLASS)}",
-                      f"LAST\tP1476\ten:{_q(title)}",
-                      f"LAST\tP356\t{_q(key)}"]
+                      f"LAST\tP31\t{ZENODO_CLASS.get(meta['type'], DEFAULT_CLASS)}{source}",
+                      f"LAST\tP1476\ten:{_q(title)}{source}",
+                      f"LAST\tP356\t{_q(key)}{source}"]
             if meta["date"]:
-                lines.append(f"LAST\tP577\t{_date(meta['date'])}")
+                lines.append(f"LAST\tP577\t{_date(meta['date'])}{source}")
             for n, creator in enumerate(meta["creators"], 1):
                 person = _find("P496", creator["orcid"]) if creator["orcid"] else []
                 if person:
-                    lines.append(f'LAST\tP50\t{person[0]}\tP1545\t"{n}"')
+                    lines.append(f'LAST\tP50\t{person[0]}\tP1545\t"{n}"{source}')
                 else:
-                    lines.append(f'LAST\tP2093\t{_q(creator["name"])}\tP1545\t"{n}"')
+                    lines.append(f'LAST\tP2093\t{_q(creator["name"])}\tP1545\t"{n}"{source}')
                 entry["authors"].append({"name": creator["name"], "item": person[0] if person else None})
             for outcome in sorted(work["outcomes"]):
                 lines.append(f"LAST\tP973\t{_q(_np_url(outcome))}")
