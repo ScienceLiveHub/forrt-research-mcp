@@ -80,7 +80,17 @@ class TestNewReplication:
 
     def test_description_carries_the_doi_so_same_title_replications_do_not_collide(self, offline):
         qs = lines(W.wikidata_cito([CITO_NP]))
-        assert 'LAST\tDen\t"replication study (2026), Zenodo 10.5281/zenodo.19756173"' in qs
+        assert 'LAST\tDen\t"reproduction or replication study (2026), Zenodo 10.5281/zenodo.19756173"' in qs
+
+    def test_repository_slug_title_is_replaced_by_the_outcome_label(self, offline, monkeypatch):
+        slug = dict(zenodo_record(), title="10.1371-journal.pgph.0001995")
+        monkeypatch.setattr(W, "_zenodo", lambda doi: slug if doi.lower().startswith("10.5281/zenodo.19") else None)
+        result = W.wikidata_cito([CITO_NP])
+        qs = lines(result)
+        assert any(l.startswith('LAST\tLen\t"Soroye 2020 thermal-exposure') for l in qs)
+        # The title statement keeps the deposit's real title; only the label changes.
+        assert 'LAST\tP1476\ten:"10.1371-journal.pgph.0001995"' in qs
+        assert "repository name" in result["works"][0]["note"]
 
     def test_author_without_an_item_becomes_a_name_string_in_display_order(self, offline):
         qs = lines(W.wikidata_cito([CITO_NP]))

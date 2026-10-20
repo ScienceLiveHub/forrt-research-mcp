@@ -43,6 +43,7 @@ from .grounding import GroundingError, _get, normalise_doi
 CITO = "http://purl.org/spar/cito/"
 NP = "http://www.nanopub.org/nschema#"
 SL = "https://w3id.org/sciencelive/o/terms/"
+RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label"
 WIKIDATA_API = "https://www.wikidata.org/w/api.php"
 ZENODO_API = "https://zenodo.org/api/records/"
 
@@ -166,6 +167,11 @@ def _np_url(uri: str) -> str:
     return canonical_uri(uri).replace("http://purl.org/np/", "https://w3id.org/np/")
 
 
+def _is_slug(title: str) -> bool:
+    """A repository-style name rather than a title: no spaces at all."""
+    return bool(title) and not any(c.isspace() for c in title.strip())
+
+
 def _q(text: str) -> str:
     return '"' + text.replace('"', "'") + '"'
 
@@ -219,8 +225,10 @@ def wikidata_cito(cito_uris: list[str], today: str = "") -> dict:
             if citing_doi is None:
                 # The citing side is the Outcome nanopub; the work is its repository.
                 outcome = subject
-                repo = next((o for _, p, o in _assertion(subject)
+                outcome_triples = _assertion(subject)
+                repo = next((o for _, p, o in outcome_triples
                              if p == SL + "hasOutcomeRepository"), "")
+                outcome_label = next((o for _, p, o in outcome_triples if p == RDFS_LABEL), "")
                 citing_doi = _doi(repo)
                 if citing_doi is None:
                     skipped.append(f"{cito_uri}: the outcome repository is not a DOI ({repo or 'none'})")
@@ -233,10 +241,12 @@ def wikidata_cito(cito_uris: list[str], today: str = "") -> dict:
             work_doi = meta["concept_doi"] if meta else citing_doi
             work = works.setdefault(work_doi.upper(), {
                 "doi": work_doi, "versions": set(), "meta": meta,
-                "outcomes": set(), "citations": []})
+                "outcomes": set(), "labels": [], "citations": []})
             work["versions"].add(citing_doi)
             if outcome:
                 work["outcomes"].add(outcome)
+                if outcome_label and outcome_label not in work["labels"]:
+                    work["labels"].append(outcome_label)
             work["citations"].append({"cited_doi": cited_doi, "cito": predicate,
                                       "intent": intents.get(predicate), "nanopub": cito_uri})
 
@@ -260,9 +270,16 @@ def wikidata_cito(cito_uris: list[str], today: str = "") -> dict:
                 skipped.append(f"{work['doi']}: no Wikidata item, and no Zenodo record to create one from")
                 continue
             title = meta["title"]
-            description = f"replication study ({meta['date'][:4]}), Zenodo {work['doi']}"
+            # A deposit named after its repository ("my-replication-repo") makes a
+            # useless label; the Outcome nanopub's own label says what was done.
+            # The title statement (P1476) stays the deposit's real title.
+            label = work["labels"][0] if _is_slug(title) and work["labels"] else title
+            if label != title:
+                entry["title"] = label
+                entry["note"] = f"Zenodo title {title!r} looks like a repository name; label taken from the Outcome nanopublication"
+            description = f"reproduction or replication study ({meta['date'][:4]}), Zenodo {work['doi']}"
             lines += ["CREATE",
-                      f"LAST\tLen\t{_q(title[:250])}",
+                      f"LAST\tLen\t{_q(label[:250])}",
                       f"LAST\tDen\t{_q(description)}",
                       f"LAST\tP31\t{ZENODO_CLASS.get(meta['type'], DEFAULT_CLASS)}",
                       f"LAST\tP1476\ten:{_q(title)}",
@@ -320,6 +337,8 @@ def _report_markdown(result: dict) -> str:
         status = f"existing item {work['item']}" if work["item"] else "NEW ITEM"
         out.append(f"## {work['title'] or work['doi']}")
         out.append(f"- DOI {work['doi']} ({status}); versions cited: {', '.join(work['versions'])}")
+        if work.get("note"):
+            out.append(f"- note: {work['note']}")
         for author in work["authors"]:
             out.append(f"- author: {author['name']} -> {author['item'] or 'name string (no Wikidata item)'}")
         for c in work["citations"]:
