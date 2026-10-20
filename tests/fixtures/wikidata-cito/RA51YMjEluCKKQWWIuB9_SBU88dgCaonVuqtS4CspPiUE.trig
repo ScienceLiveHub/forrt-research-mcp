@@ -1,0 +1,59 @@
+@prefix this: <https://w3id.org/sciencelive/np/RA51YMjEluCKKQWWIuB9_SBU88dgCaonVuqtS4CspPiUE> .
+@prefix sub: <https://w3id.org/sciencelive/np/RA51YMjEluCKKQWWIuB9_SBU88dgCaonVuqtS4CspPiUE/> .
+@prefix np: <http://www.nanopub.org/nschema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix npx: <http://purl.org/nanopub/x/> .
+@prefix dc: <http://purl.org/dc/terms/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+sub:Head {
+  this: a np:Nanopublication;
+    np:hasAssertion sub:assertion;
+    np:hasProvenance sub:provenance;
+    np:hasPublicationInfo sub:pubinfo .
+}
+
+sub:assertion {
+  sub:soroye-iberia-replication-phase3 a <https://w3id.org/sciencelive/o/terms/FORRT-Replication-Study>,
+      <https://w3id.org/sciencelive/o/terms/Replication-Study>;
+    <http://www.w3.org/2000/01/rdf-schema#label> "Iberian regional replication of Soroye et al. 2020 using open GBIF Bombus occurrence data";
+    <http://www.w3.org/2004/02/skos/core#related> <http://www.wikidata.org/entity/Q1141466>,
+      <http://www.wikidata.org/entity/Q123509>, <http://www.wikidata.org/entity/Q125928>,
+      <http://www.wikidata.org/entity/Q12837>, <http://www.wikidata.org/entity/Q1531570>,
+      <http://www.wikidata.org/entity/Q250388>, <http://www.wikidata.org/entity/Q28865>,
+      <http://www.wikidata.org/entity/Q2922293>;
+    <https://w3id.org/sciencelive/o/terms/hasDeviationDescription> """  Three intentional deviations from the original lme4/MCMC implementation:                                                                        
+  (i) the species random effect is fit by variational Bayes (statsmodels.BinomialBayesMixedGLM) rather than full MCMC, a fast approximation that typically underestimates posterior credible-interval width by approximately 10–20%;                                                                                                                                         
+  (ii) the climateLimits[[1]]/[[2]] precomputation step is reconstructed from the available R helper scripts because the precomputation script itself is not in the public Figshare release of the original code;                                                                                                   
+  (iii) the input occurrence dataset is replaced with an open GBIF Iberian Bombus query (https://doi.org/10.15468/dl.3frmsq) rather than the authors' curated continental dataset; this is the deliberate experimental change that makes the study a regional replication. """;
+    <https://w3id.org/sciencelive/o/terms/hasDiscipline> <http://www.wikidata.org/entity/Q7150>;
+    <https://w3id.org/sciencelive/o/terms/hasMethodologyDescription> """  The Python re-implementation of Soroye et al. 2020's pipeline (weatherxbiodiversity, https://doi.org/10.5281/zenodo.19756173) was applied to a regional dataset of Bombus occurrences for Spain and Portugal retrieved from the GBIF Occurrence Download API (https://doi.org/10.15468/dl.3frmsq, 36,560 records, georeferenced, no geospatial issues, accessed 2026-04-25). The cleaning pipeline applies Soroye's species filter, IUCN exclusion list, the same baseline-vs-recent presence/absence construction on a 100 km cylindrical equal-area grid, and per-species Thermal Exposure Index (TEI) and                                                            
+  Precipitation Exposure Index (PEI) computed from CRU TS 3.24.01 monthly climate. The mixed-effects logistic GLMM is fit with the species random effect and the same fixed-effect interactions as the original (thermal-position baseline + delta + their interaction, precipitation analogues, baseline × baseline interaction, delta × delta interaction). The GBIF download was minted specifically for this study via          
+  notebooks/01b_gbif_download_doi.py in the same repository.  """;
+    <https://w3id.org/sciencelive/o/terms/hasScopeDescription> "  The complete claim — that local extirpation rate in bumble bee species rises with the frequency at which local temperatures exceed species-specific historically observed thermal tolerances — is tested on an independent regional dataset of bumble bee occurrences for the Iberian Peninsula (Spain and Portugal). The regression specification, response variable, grid resolution, and baseline-vs-recent period definitions all match those used in the Phase 2 Python port; only the input occurrence dataset is replaced.";
+    <https://w3id.org/sciencelive/o/terms/targetsClaim> <https://w3id.org/sciencelive/np/RArj4912Wm6DO0Y-sR8KeaJsZUKrVcJHWArmINg-kaOhs/weather-biodiversity> .
+}
+
+sub:provenance {
+  sub:assertion prov:wasAttributedTo <https://orcid.org/0000-0002-1784-2920> .
+}
+
+sub:pubinfo {
+  <https://orcid.org/0000-0002-1784-2920> <http://xmlns.com/foaf/0.1/name> "Anne Fouilloux" .
+  
+  this: dc:created "2026-04-25T12:59:22.004Z"^^xsd:dateTime;
+    dc:creator <https://orcid.org/0000-0002-1784-2920>;
+    dc:license <https://creativecommons.org/licenses/by/4.0/>;
+    npx:introduces sub:soroye-iberia-replication-phase3;
+    npx:wasCreatedAt <https://platform.sciencelive4all.org>;
+    <http://www.w3.org/2000/01/rdf-schema#label> "NP created using Declaring a replication study design according to FORRT";
+    <https://w3id.org/np/o/ntemplate/wasCreatedFromTemplate> <https://w3id.org/np/RAuLEjPp-4dTvPwMkfHggTto1CgjIftiGRAgHlyeEonjQ> .
+  
+  sub:sig npx:hasAlgorithm "RSA";
+    npx:hasPublicKey "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAoDcOiD+jen8awiJ6DB2ewDw66PeG64hODmgNFwy7GrwQui4HKnHdvxd++1UhTgiOfycxyxBb7sXPSikLw/1TsSyPsEl0P3/+600szxpTGgLNzW+bZ2DVP3d8ERMV1aWpH0ci3B/5vmK+vXQZ4uCoq57NE0MiFg5c13Gy0gd6n7wZYEhYM4AjWSLL0QS/HY+TFZMYL9bCFeATennGrlB2UEjRlw21UB2Ah16ZZ6hxQlfctFJZE7TGnBJPB3ttTjfcOfamhjZVwQ0yV9mv7x6PGiSmkzpJTVLjn8hagoKT05YUwVQArFb+w7f6sXqvvljMigjd/Rbqgbye/lLUAZLfJSnFM58TubfpEJvXV4zNMDEoT3VQ7dokgoLgMrmjZCKATtQ7gomocoTJ1NhN2esRNtGzWaS2obL/mueUQlMlavssZnqL8WICkdAuDlwDVNbsbwEWKQ50kiPdAdduSigifxA4CM7TgvnxqZVoAResEGP6UhTTem3T4CsbEas1Caj9wa7M1jPjACu5LF5BwcVns3ZQHWLipjRjD+9/ur3G8QtuxbNhmXlDYQ6tXxB1lK+Oz7O519b3bA15ilzFl0SdvMBGTe46xaQ9DsJT18THKnPbUhNMy0dH0VtzpB+EEaXZ25Fp9VHMEUqo1lLS9e89eO3efiqkESKQ7wmB+/DlIRcCAwEAAQ==";
+    npx:hasSignature "b45ONGFp9B9+5/bgD9Gg2M+mOMOh/J2knbYR2xIhlqY8EbIjDfW9khrC4YLAWRCo3Ar1kh/mEj6NjoNL8m9QUy0fbpTURmZqfnL5vT/E3oSt4JjUp2xiXMJUXG+TJeflzQCYZnXc0HuhGgaVLcRVXxp91njrenl/4h5PZWkQzdolrTxSoNfh0s/9z5NAvvbKv0FqKWyDnqN0Fb6vSp4yeG7KrBZxxfx5vsLOGuVLtc4/BScnSNr0PUEzT5nLqbVkYvfLLT+n9KT6wOPM6Cslx7Z7n7E6dZWzpCpgQCFKs2i1WcQlabQ78ja77tyXj+sawmgP5lT8AsU0xrHk4Q9Fo6vFh+fvjjoBfUXNoBHtmMtz6dk2u4jmzVlKW81ttIfrYGH17/2KNrB9p/HDcBd3nmhluVCoRDITZ1OzqUVSWSaU7gvMMDrYDb1aZ3qfPmXDNOqMOUrIdpgD3yTPHF5I6lL+80pICT9WbkKdXJ9fgDrgOFp6jyhmZGyHmH8fm5iLoa0COmtM43fAMAQFI4/3VU8cr4oFD7wU/N0I4n5WKYWCFZByNLJqCYUmthi+NzuWAIjKLXZIcKFMrNOLkpkkB129xHW2y7Pb0MOXXeePWfrgQCRjgOHG3av2UAfH9uGaxdxkYA5nL1iEquv2fEIDkqTIud1jhuqi/TMWYnb8rwM=";
+    npx:hasSignatureTarget this:;
+    npx:signedBy <https://orcid.org/0000-0002-1784-2920> .
+}
+

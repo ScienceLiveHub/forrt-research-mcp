@@ -29,6 +29,7 @@ Repository = "https://github.com/ScienceLiveHub/forrt-research-mcp"
 
 [project.scripts]
 forrt-research-mcp = "forrt_research_mcp.server:main"
+forrt-wikidata-cito = "forrt_research_mcp.wikidata_cito:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]

@@ -377,6 +377,43 @@ Candidates are annotated, never filtered: a near miss is often the informative
 result. Zero candidates means leave the field empty — never fall back to a QID
 from memory.
 
+### `cito_to_wikidata(cito_uris=None, published_path="")`
+
+Makes a published typed citation ("this replication *confirms* that paper")
+visible in Wikidata and Scholia. Wikidata already models CiTO: "cites work"
+(P2860) with the qualifier "has goal" (P3712) set to one of 48 citation-intent
+items, each of which has an exact match (P2888) to its CiTO URI — so the
+mapping is read from Wikidata at run time, never copied here (a copy would go
+stale without saying so; if Wikidata cannot be reached the tool says so). The
+statement is referenced with "nanopublication identifier" (P12545) in the
+`https://w3id.org/np/<id>` form, which Scholia counts as an annotation defined
+in a nanopublication.
+
+**It never edits Wikidata.** It returns a QuickStatements batch and a per-work
+report; a person reviews them and submits the batch at
+https://quickstatements.toolforge.org with their own account. Also available as
+a command:
+
+```bash
+forrt-wikidata-cito --published nanopubs/PUBLISHED.md --out wikidata
+```
+
+What it guarantees:
+
+- items are looked up by DOI (and authors by ORCID) and created only when missing;
+- one item per **work**: Zenodo versions are grouped under their concept DOI, so
+  two versions of one deposit do not become two replications;
+- idempotent: citations already in Wikidata are skipped; a citation to a work
+  created by the same batch is listed as `pending` and added on the next run;
+- every fact on a new item (type, title, DOI, date, authors) cites the Zenodo
+  record it was read from: Wikidata is a secondary knowledge base, and the citation
+  itself cites its nanopublication;
+- the description is short prose ("reproduction or replication study by <first
+  author> (<year>)"), keeping identifiers in statements where they belong.
+
+Items are created from the Zenodo record's title: fix a repository-slug title on
+Zenodo before submitting.
+
 ## Upstream quirks this handles
 
 Found by probing live data rather than reading the API contract, and each one is
