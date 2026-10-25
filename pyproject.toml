@@ -19,6 +19,7 @@ dependencies = [
     "mcp>=1.2.0,<2",  # 2.0 dropped mcp.server.fastmcp; the server wrapper needs the 1.x SDK
     "pypdf>=4",       # PDF text extraction for verify_quote
     "rdflib>=7",      # parse template nanopubs as RDF, not by regex
+    "roc-validator>=0.13,<0.14",  # validate_rocrate: the RO-Crate validator the template's CI uses
 ]
 
 [project.urls]

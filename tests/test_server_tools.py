@@ -20,7 +20,7 @@ from forrt_research_mcp.server import mcp
 EXPECTED_TOOLS = {
     "cito_to_wikidata", "constellation", "constellation_raw", "list_schemas", "prior_work",
     "resolve_doi", "template_fields", "validate_chain_draft", "validate_draft",
-    "validate_drafts", "verify_chain", "verify_quote", "vocabulary",
+    "validate_drafts", "validate_rocrate", "verify_chain", "verify_quote", "vocabulary",
     "wikidata_lookup",
 }
 
@@ -66,6 +66,7 @@ class TestRegistration:
         ("validate_drafts", ["directory"]),
         ("validate_chain_draft", ["path"]),
         ("verify_chain", ["published_path"]),
+        ("validate_rocrate", ["path"]),
     ])
     def test_required_parameters_are_what_the_docs_promise(self, tool, required):
         """The skills in forrt-replication-template call these by keyword; a
@@ -113,6 +114,7 @@ class TestFailuresBecomeData:
         ("validate_drafts", {"directory": "/nope"}, "not a directory"),
         ("validate_chain_draft", {"path": "/nope.json"}, "no chain draft"),
         ("verify_chain", {"published_path": "/nope.md"}, "no ledger"),
+        ("validate_rocrate", {"path": "/nope"}, "no ro-crate-metadata.json"),
     ])
     def test_a_bad_argument_returns_ok_false_with_the_real_message(
             self, tool, kwargs, expected):
