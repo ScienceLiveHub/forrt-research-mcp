@@ -4,6 +4,7 @@ Two layers, both deterministic:
 
 1. **Specification** — rocrate-validator (roc-validator) against the requested profile and severity
    (default RO-Crate 1.2, REQUIRED). `passed` is its verdict.
+   The validator fetches the RO-Crate JSON-LD context once and caches it, so the first run needs the network.
 2. **FDO readiness** — what a replication crate needs beyond the specification to be deposited and found as a
    FAIR Digital Object (the conventions of forrt-replication-template's scripts/build_rocrate.py): a persistent
    identifier, a licence, a main workflow, conformance to a community FAIR Implementation Profile, the FORRT
@@ -71,8 +72,13 @@ def fdo_checks(metadata: dict) -> list[dict]:
 
 
 def validate_rocrate(path: str, profile: str = "ro-crate-1.2", level: str = "REQUIRED",
-                     metadata_only: bool = False) -> dict:
-    """Validate the crate at `path` (its directory or its ro-crate-metadata.json)."""
+                     metadata_only: bool = False, offline: bool = False) -> dict:
+    """Validate the crate at `path` (its directory or its ro-crate-metadata.json).
+
+    The validator fetches the RO-Crate JSON-LD context on first use and caches it; `offline=True` works only
+    once that cache exists (otherwise every crate fails the compaction check with "Unable to retrieve the
+    JSON-LD context").
+    """
     from rocrate_validator import models, services  # heavy import, only when the tool is used
 
     level = level.upper()
@@ -86,7 +92,7 @@ def validate_rocrate(path: str, profile: str = "ro-crate-1.2", level: str = "REQ
     try:
         result = services.validate(models.ValidationSettings(
             rocrate_uri=str(root), profile_identifier=profile, requirement_severity=models.Severity[level],
-            metadata_only=metadata_only, offline=True))
+            metadata_only=metadata_only, offline=offline))
     except Exception as e:  # unknown profile, unreadable crate
         raise RoCrateError(f"validator could not run: {e}") from e
     issues = [{"severity": i.severity.name, "check": i.check.identifier, "name": i.check.name,

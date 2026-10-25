@@ -451,7 +451,7 @@ def cito_to_wikidata(cito_uris: list[str] | None = None, published_path: str = "
 
 @mcp.tool()
 def validate_rocrate(path: str, profile: str = "ro-crate-1.2", level: str = "REQUIRED",
-                     metadata_only: bool = False) -> dict:
+                     metadata_only: bool = False, offline: bool = False) -> dict:
     """Check an RO-Crate before it is released or deposited (e.g. in ROHub).
 
     `path` is the crate's directory (usually the repository root) or its
@@ -463,7 +463,8 @@ def validate_rocrate(path: str, profile: str = "ro-crate-1.2", level: str = "REQ
         ro-crate-1.2) at `level` (REQUIRED, RECOMMENDED or OPTIONAL). Each issue
         names the check, its message and the offending entity — relay them
         verbatim. `metadata_only=True` skips the checks that the listed files
-        exist (for a crate whose data are not checked out).
+        exist (for a crate whose data are not checked out). The first run fetches
+        the RO-Crate JSON-LD context (then cached); `offline=True` needs that cache.
       - `fdo_checks`/`fdo_ready`: what a replication crate needs beyond the
         specification to work as a FAIR Digital Object — a persistent
         identifier, a licence, the workflow as mainEntity, a community FAIR
@@ -476,7 +477,8 @@ def validate_rocrate(path: str, profile: str = "ro-crate-1.2", level: str = "REQ
     rocrate.json) and rebuild.
     """
     try:
-        return {"ok": True, **_validate_rocrate(path, profile=profile, level=level, metadata_only=metadata_only)}
+        return {"ok": True, **_validate_rocrate(path, profile=profile, level=level,
+                                                  metadata_only=metadata_only, offline=offline)}
     except RoCrateError as e:
         return _fail(e)
 

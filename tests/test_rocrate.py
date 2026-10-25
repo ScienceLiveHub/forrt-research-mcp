@@ -1,7 +1,8 @@
 """validate_rocrate: the RO-Crate specification check and the FDO-readiness checks.
 
 The crate fixtures are minimal versions of what forrt-replication-template's
-scripts/build_rocrate.py writes. The validator runs offline on its bundled profiles.
+scripts/build_rocrate.py writes. The validator fetches the RO-Crate JSON-LD context
+on first use (then caches it), so the first test run needs the network.
 """
 
 from __future__ import annotations

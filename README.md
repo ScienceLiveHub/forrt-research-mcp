@@ -424,7 +424,7 @@ What it guarantees:
 Items are created from the Zenodo record's title: fix a repository-slug title on
 Zenodo before submitting.
 
-### `validate_rocrate(path, profile="ro-crate-1.2", level="REQUIRED", metadata_only=False)`
+### `validate_rocrate(path, profile="ro-crate-1.2", level="REQUIRED", metadata_only=False, offline=False)`
 
 Checks a replication's `ro-crate-metadata.json` before it is released or
 deposited in ROHub, with the same validator the template's CI runs
@@ -434,7 +434,8 @@ crate's directory or its metadata file.
 - `passed` / `issues` — the specification check against `profile` at `level`
   (REQUIRED, RECOMMENDED, OPTIONAL); each issue names the check, its message and
   the offending entity. `metadata_only=True` skips the checks that listed files
-  exist, for a crate whose data are not checked out.
+  exist, for a crate whose data are not checked out. The first run fetches the
+  RO-Crate JSON-LD context and caches it; `offline=True` relies on that cache.
 - `fdo_checks` / `fdo_ready` — what a crate needs beyond the specification to
   work as a FAIR Digital Object: a persistent identifier, a licence, the
   workflow as `mainEntity`, a community FAIR Implementation Profile in
