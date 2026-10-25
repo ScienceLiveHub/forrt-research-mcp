@@ -1,0 +1,20 @@
+{
+  "conceptrecid": "19756173",
+  "doi": "10.5281/zenodo.19762723",
+  "metadata": {
+    "title": "WeatherXBiodiversity: Soroye et al. (2020) Replication for Iberian Bombus",
+    "publication_date": "2026-04-25",
+    "resource_type": {
+      "title": "Software",
+      "type": "software"
+    },
+    "creators": [
+      {
+        "name": "Fouilloux, Anne",
+        "affiliation": "LifeWatch ERIC",
+        "orcid": "0000-0002-1784-2920"
+      }
+    ],
+    "version": "v0.2.1"
+  }
+}

@@ -42,6 +42,8 @@ from .templates import VOCABULARIES
 from .templates import steps as _steps
 from .templates import template_fields as _template_fields
 from .templates import vocabulary as _vocabulary
+from .wikidata_cito import cito_uris_from_published as _cito_uris_from_published
+from .wikidata_cito import wikidata_cito as _wikidata_cito
 
 mcp = FastMCP("forrt-research")
 
@@ -408,6 +410,40 @@ def validate_chain_draft(path: str, live: bool = True) -> dict:
     try:
         return {"ok": True, **_validate_chain_draft(path, live=live)}
     except ApiError as e:
+        return _fail(e)
+
+
+@mcp.tool()
+def cito_to_wikidata(cito_uris: list[str] | None = None, published_path: str = "") -> dict:
+    """Mirror published CiTO citations into Wikidata — as a batch for a human to submit.
+
+    Run it after `verify_chain` is green, to make the chain's typed citation
+    ("this replication confirms / qualifies / disputes that paper") visible in
+    Wikidata and Scholia. Pass the CiTO nanopub URIs, or `published_path` (a
+    `nanopubs/PUBLISHED.md`) to take every CiTO nanopub in the ledger.
+
+    It writes nothing to Wikidata. It returns `quickstatements` — a batch that
+    adds, on the replication's item, "cites work" (P2860) → the original, with
+    "has goal" (P3712) → the CiTO intent, referenced by "nanopublication
+    identifier" (P12545) → the CiTO nanopub — plus a per-work report. Show the
+    researcher the report; they submit the batch at
+    https://quickstatements.toolforge.org with their own Wikidata account.
+    Never submit it on their behalf.
+
+    Items are looked up by DOI and ORCID first and created only when missing; a
+    replication is one item per Zenodo concept DOI, not one per version. Items
+    are created from the Zenodo record's title, so a repository-slug title
+    ("my-replication-repo") should be fixed on Zenodo first. `pending` lists
+    citations to works this same batch creates: re-run after submitting.
+    """
+    try:
+        uris = list(cito_uris or [])
+        if published_path:
+            uris += _cito_uris_from_published(published_path)
+        if not uris:
+            return _fail(ValueError("give cito_uris or published_path"))
+        return {"ok": True, **_wikidata_cito(uris)}
+    except (ApiError, OSError) as e:
         return _fail(e)
 
 

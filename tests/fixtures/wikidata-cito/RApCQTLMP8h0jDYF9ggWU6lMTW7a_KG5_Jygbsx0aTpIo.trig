@@ -1,0 +1,44 @@
+@prefix this: <https://w3id.org/sciencelive/np/RApCQTLMP8h0jDYF9ggWU6lMTW7a_KG5_Jygbsx0aTpIo> .
+@prefix sub: <https://w3id.org/sciencelive/np/RApCQTLMP8h0jDYF9ggWU6lMTW7a_KG5_Jygbsx0aTpIo/> .
+@prefix np: <http://www.nanopub.org/nschema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix npx: <http://purl.org/nanopub/x/> .
+@prefix dc: <http://purl.org/dc/terms/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+sub:Head {
+  this: a np:Nanopublication;
+    np:hasAssertion sub:assertion;
+    np:hasProvenance sub:provenance;
+    np:hasPublicationInfo sub:pubinfo .
+}
+
+sub:assertion {
+  <https://w3id.org/sciencelive/np/RAIylrhtnfTH_vtp1nTDVAiGsv2u_Ea4Uvh35DrGySuWs> a
+      <https://schema.org/CreativeWork>;
+    <http://purl.org/spar/cito/confirms> <https://doi.org/10.1126/science.aax8591> .
+}
+
+sub:provenance {
+  sub:assertion prov:wasAttributedTo <https://orcid.org/0000-0002-1784-2920> .
+}
+
+sub:pubinfo {
+  <https://orcid.org/0000-0002-1784-2920> <http://xmlns.com/foaf/0.1/name> "Anne Fouilloux" .
+  
+  this: dc:created "2026-04-25T13:12:14.607Z"^^xsd:dateTime;
+    dc:creator <https://orcid.org/0000-0002-1784-2920>;
+    dc:license <https://creativecommons.org/licenses/by/4.0/>;
+    npx:hasNanopubType <http://purl.org/spar/cito/cites>;
+    npx:wasCreatedAt <https://platform.sciencelive4all.org>;
+    <http://www.w3.org/2000/01/rdf-schema#label> "Citations for: RAIylrhtnfTH_vtp1nTDVAiGsv2u_Ea4Uvh35DrGySuWs";
+    <https://w3id.org/np/o/ntemplate/wasCreatedFromTemplate> <https://w3id.org/np/RA43F9EoOuzF0xoNUnCMNyFsfIqlsuWDdPHCnN0wCdCAw> .
+  
+  sub:sig npx:hasAlgorithm "RSA";
+    npx:hasPublicKey "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAoDcOiD+jen8awiJ6DB2ewDw66PeG64hODmgNFwy7GrwQui4HKnHdvxd++1UhTgiOfycxyxBb7sXPSikLw/1TsSyPsEl0P3/+600szxpTGgLNzW+bZ2DVP3d8ERMV1aWpH0ci3B/5vmK+vXQZ4uCoq57NE0MiFg5c13Gy0gd6n7wZYEhYM4AjWSLL0QS/HY+TFZMYL9bCFeATennGrlB2UEjRlw21UB2Ah16ZZ6hxQlfctFJZE7TGnBJPB3ttTjfcOfamhjZVwQ0yV9mv7x6PGiSmkzpJTVLjn8hagoKT05YUwVQArFb+w7f6sXqvvljMigjd/Rbqgbye/lLUAZLfJSnFM58TubfpEJvXV4zNMDEoT3VQ7dokgoLgMrmjZCKATtQ7gomocoTJ1NhN2esRNtGzWaS2obL/mueUQlMlavssZnqL8WICkdAuDlwDVNbsbwEWKQ50kiPdAdduSigifxA4CM7TgvnxqZVoAResEGP6UhTTem3T4CsbEas1Caj9wa7M1jPjACu5LF5BwcVns3ZQHWLipjRjD+9/ur3G8QtuxbNhmXlDYQ6tXxB1lK+Oz7O519b3bA15ilzFl0SdvMBGTe46xaQ9DsJT18THKnPbUhNMy0dH0VtzpB+EEaXZ25Fp9VHMEUqo1lLS9e89eO3efiqkESKQ7wmB+/DlIRcCAwEAAQ==";
+    npx:hasSignature "iJc3aWYwjpc+YanISuoY7WhxJxsOnC9zQkMOLcwawLvXHCro1X76uf2cApefBwx0lmliK7U4huNJ4gy1quIZ3pioK9NsWaKUNQGav0pHu2Tlx3K7YVMS+e9vF5YMoTSQoXrXGJSFQHW6s8ejr8/HGoXfQMluHmpl8X9SwNKuuiNps89Nlf36QkG76v/LfSVugh77ATx0cE82a416wWwWImDyo+QjoaPjMhiqV/QPlY0bin5sgDbxxdd4Hi8KOnOus2tvz1GFZgYpJBWd5QCd4FWka5+VW/gC2KiLF7wTJjZksB135yBcbjYq5j0aGtF7sjvva8U2roPqO2T0LE3lnamhuHwHfWHBE1j3/280pRlNcESAgKuWW5J9rwi6pOVyOMCdsrloNk+DIuL2Uf9Ck4jidt2kGl/54yo1yBQrZbLGFmdTKX7FGL/UPQXlArBhUQZTH9VnrLmytW7mm+MK4YoRgx/jdJ1F+POsmLvhyeEy6Ox9XZeRKtfMA1gu8d/mi/hqtoD+/5SC6HUk8OPJfzv9ad4bS1hiJYbR6ax/dtEyhtfkWKNTzBaVytNApWBoUXphiHKWwJkbjFUxhRk3mKChbWNt58tbie9ku6fd3VYqfzHh6qlOsEdU0O1jf2MJnsBBBrj0c0rP2fMHCksagFhwgouMeRpEUgjfdHrWOTc=";
+    npx:hasSignatureTarget this:;
+    npx:signedBy <https://orcid.org/0000-0002-1784-2920> .
+}
+

@@ -18,7 +18,7 @@ import pytest
 from forrt_research_mcp.server import mcp
 
 EXPECTED_TOOLS = {
-    "constellation", "constellation_raw", "list_schemas", "prior_work",
+    "cito_to_wikidata", "constellation", "constellation_raw", "list_schemas", "prior_work",
     "resolve_doi", "template_fields", "validate_chain_draft", "validate_draft",
     "validate_drafts", "verify_chain", "verify_quote", "vocabulary",
     "wikidata_lookup",
