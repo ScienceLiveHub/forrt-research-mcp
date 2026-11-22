@@ -520,6 +520,14 @@ The bundled template snapshot under `src/forrt_research_mcp/data/` is vendored
 from `ScienceLiveHub/forrt-replication-template`, as is `template_spec.py`.
 Re-vendor when `template_fields` reports `driftedFromSnapshot`.
 
+## Who is behind it
+
+forrt-research-mcp is part of [Science Live](https://sciencelive4all.org).
+
+- **[LifeWatch ERIC](https://www.lifewatch.eu)**: development. Anne Fouilloux, CTO of LifeWatch ERIC, develops the Science Live platform and its open tools: FORRT Research MCP, Replication Radar and fip-mcp.
+- **[VitenHub AS](https://vitenhub.no/)**: infrastructure and operations. Jean Iaquinta, CEO of VitenHub AS, manages the infrastructure behind the platform. VitenHub AS operates Science Live and delivers the paid replication services.
+- **[Knowledge Pixels](https://knowledgepixels.com)**: the nanopublication infrastructure that Science Live publishes to.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
